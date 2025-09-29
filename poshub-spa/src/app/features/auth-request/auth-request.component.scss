@@ -1,0 +1,27 @@
+.application-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.application-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  width: 250px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.application-card img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
