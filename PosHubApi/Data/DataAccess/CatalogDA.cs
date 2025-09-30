@@ -334,8 +334,8 @@ namespace PosHubApi.Data.DataAccess
                     {
                         string sql = @"
                                 UPDATE Products
-                                SET PosHubProductId = @Id
-                                WHERE PosReference = @PosReference;";
+                                SET PosHubProductId = @Id , UpdatedAt = GetDate()
+                                WHERE PosReference = @PosReference and PosHubProductId is NULL;";
 
                         using (SqlCommand cmd = new SqlCommand(sql, conn))
                         {

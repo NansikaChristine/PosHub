@@ -32,5 +32,6 @@ namespace PosHubApi.Dtos
         public List<ServiceAvailabilityDto> ServiceAvailability { get; set; } = new();
         public List<string> ModifierGroups { get; set; } = new();
         public List<SelectionDto> Selections { get; set; } = new();
+
     }
 }

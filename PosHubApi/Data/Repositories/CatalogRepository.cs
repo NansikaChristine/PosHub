@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Data.SqlClient;
 using PosHubApi.Data.DataAccess;
 using PosHubApi.Data.Interfaces;
@@ -486,15 +487,16 @@ namespace PosHubApi.Data.Repositories
                     {
                         url += $"&nextPageKey={nextPageKey}";
                     }
-            
+
                     HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
 
                     HttpResponseMessage response = await _httpClient.SendAsync(request);
-
+                    Console.WriteLine("count");
                     if (!response.IsSuccessStatusCode)
                     {
                         string body = await response.Content.ReadAsStringAsync();
+                        
                         await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
                         {
                             ErrorMessage = $"API call failed with status {response.StatusCode}. Body: {body}",
@@ -505,19 +507,19 @@ namespace PosHubApi.Data.Repositories
                         return finalResponse;
                     }
 
-                string json = await response.Content.ReadAsStringAsync();
+                    string json = await response.Content.ReadAsStringAsync();
 
-                CatalogProductsResponseDto catalogResponse = JsonSerializer.Deserialize<CatalogProductsResponseDto>(json,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    CatalogProductsResponseDto catalogResponse = JsonSerializer.Deserialize<CatalogProductsResponseDto>(json,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                if (catalogResponse?.Data != null && catalogResponse.Data.Any())
-                {
-                    finalResponse.Data.AddRange(catalogResponse.Data);
-                    await _catalogDA.UpdatePosHubProductIdsAsync(catalogResponse.Data, apiCall);
+                    if (catalogResponse?.Data != null && catalogResponse.Data.Any())
+                    {
+                        finalResponse.Data.AddRange(catalogResponse.Data);
+                        await _catalogDA.UpdatePosHubProductIdsAsync(catalogResponse.Data, apiCall);
+                    }
+                    nextPageKey = catalogResponse?.NextPageKey;
                 }
-                nextPageKey = catalogResponse?.NextPageKey;
-            }
-            while (!string.IsNullOrEmpty(nextPageKey));
+                while (!string.IsNullOrEmpty(nextPageKey));
 
                 return finalResponse;
             }
@@ -539,5 +541,215 @@ namespace PosHubApi.Data.Repositories
             }
         }
 
+        public async Task<ProductDto> GetCatalogProductByProductId(ClientsDto client, string productId, string apiCall)
+        {
+            try
+            {
+                string url = $"https://api-sit-dr.stage.tryposhub.com/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products/{productId}";
+
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
+
+                HttpResponseMessage response = await _httpClient.SendAsync(request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    string body = await response.Content.ReadAsStringAsync();
+                    await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
+                    {
+                        ErrorMessage = $"API call failed with status {response.StatusCode}. Body: {body}",
+                        ApiCall = apiCall,
+                        MethodName = nameof(GetCatalogProductByProductId),
+                        ErrorOccurredDateTime = DateTime.Now
+                    });
+                    return new ProductDto();
+                }
+
+                string json = await response.Content.ReadAsStringAsync() ;
+
+                ProductResponse productResponse = JsonSerializer.Deserialize<ProductResponse>(json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                return productResponse.Data ?? new ProductDto();;
+            }
+            catch (Exception ex)
+            {
+                ApiErrorMessageModel error = new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = apiCall,
+                    MethodName = nameof(GetCatalogProductByProductId),
+                    ErrorOccurredDateTime = DateTime.Now
+                };
+
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
+                return new ProductDto();
+            }
+        }
+
+        public async Task<ProductDto> UpdateCatalogProductByProductId(ClientsDto client, ProductUpdateRequestDto product, string productId, string apiCall)
+        {
+            try
+            {
+                string url = $"https://api-sit-dr.stage.tryposhub.com/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products/{productId}";
+
+                Console.WriteLine("Url: " + url);
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Patch, url);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
+
+                JsonSerializerOptions options = new JsonSerializerOptions
+                {
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                };
+
+                string jsonContent = JsonSerializer.Serialize(product, options);
+
+
+                //string jsonContent = JsonSerializer.Serialize<ProductUpdateRequestDto>(product);
+                request.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+                Console.WriteLine(jsonContent);
+;
+                HttpResponseMessage response = await _httpClient.SendAsync(request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    string body = await response.Content.ReadAsStringAsync();
+                    await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
+                    {
+                        ErrorMessage = $"API call failed with status {response.StatusCode}. Body: {body}",
+                        ApiCall = apiCall,
+                        MethodName = nameof(UpdateCatalogProductByProductId),
+                        ErrorOccurredDateTime = DateTime.Now
+                    });
+                    return new ProductDto();
+                }
+
+                string json = await response.Content.ReadAsStringAsync();
+                
+                Console.WriteLine("Json", json);
+
+                ProductResponse productResponse = JsonSerializer.Deserialize<ProductResponse>(json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                return productResponse.Data ?? new ProductDto();
+            }
+            catch (Exception ex)
+            {
+                ApiErrorMessageModel error = new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = apiCall,
+                    MethodName = nameof(UpdateCatalogProductByProductId),
+                    ErrorOccurredDateTime = DateTime.Now
+                };
+
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
+                return new ProductDto();
+            }
+        }
+
+        public async Task<ProductDto> CreateCatalogProductByProductId(ClientsDto client, ProductDto product, string apiCall)
+        {
+            try
+            {
+                string url = $"https://api-sit-dr.stage.tryposhub.com/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products";
+
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
+
+                string jsonContent = JsonSerializer.Serialize(product);
+                request.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await _httpClient.SendAsync(request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    string body = await response.Content.ReadAsStringAsync();
+                    await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
+                    {
+                        ErrorMessage = $"API call failed with status {response.StatusCode}. Body: {body}",
+                        ApiCall = apiCall,
+                        MethodName = nameof(CreateCatalogProductByProductId),
+                        ErrorOccurredDateTime = DateTime.Now
+                    });
+                    return new ProductDto();
+                }
+
+                string json = await response.Content.ReadAsStringAsync();
+
+                ProductDto productResponse = JsonSerializer.Deserialize<ProductDto>(json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                return productResponse;
+            }
+            catch (Exception ex)
+            {
+                ApiErrorMessageModel error = new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = apiCall,
+                    MethodName = nameof(CreateCatalogProductByProductId),
+                    ErrorOccurredDateTime = DateTime.Now
+                };
+
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
+                return new ProductDto();
+            }
+        }
+
+        public async Task<bool> DeleteCatalogProductByProductId(ClientsDto client, string productId, string apiCall)
+        {
+            try
+            {
+                string url = $"https://api-sit-dr.stage.tryposhub.com/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products/{productId}";
+        
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Delete, url);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
+                
+                HttpResponseMessage response = await _httpClient.SendAsync(request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    string body = await response.Content.ReadAsStringAsync();
+                    await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
+                    {
+                        ErrorMessage = $"API call failed with status {response.StatusCode}. Body: {body}",
+                        ApiCall = apiCall,
+                        MethodName = nameof(DeleteCatalogProductByProductId),
+                        ErrorOccurredDateTime = DateTime.Now
+                    });
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ApiErrorMessageModel error = new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = apiCall,
+                    MethodName = nameof(DeleteCatalogProductByProductId),
+                    ErrorOccurredDateTime = DateTime.Now
+                };
+
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
+                return false;
+            }
+        }
     }
 }

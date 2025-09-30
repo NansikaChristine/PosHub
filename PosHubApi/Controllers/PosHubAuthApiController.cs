@@ -50,8 +50,7 @@ namespace PosHubApi.Controllers
                 requestDto.Client_Secret = clientDetail.ClientSecret;
                 requestDto.Scope = "provisioning connections.write catalogs.read catalogs.write orders.read orders.write locations.read locations.write connections.read";
 
-                string apiCall1 = $"PosHubAuthApi/token/save";
-                TokenResponseDto token = await _authRepository.GetAccessTokenAsync(requestDto, apiCall1);
+                TokenResponseDto token = await _authRepository.GetAccessTokenAsync(requestDto, apiCall);
 
                 AccountLocationDto dto = new AccountLocationDto();
                 dto.Code = code;
@@ -63,8 +62,7 @@ namespace PosHubApi.Controllers
                 dto.RefreshToken = token.RefreshToken;
                 dto.Authorized = true;
 
-                string apiCall2 = "PosHubAuthApi/saveOrUpdateAccountLocation";
-                bool result = await _authRepository.SaveOrUpdateAccountLocationAsync(dto, apiCall2);
+                bool result = await _authRepository.SaveOrUpdateAccountLocationAsync(dto, apiCall);
 
                 if (result)
                 {
@@ -82,13 +80,32 @@ namespace PosHubApi.Controllers
 
         }
 
-        [HttpPost("token/save")]
-        public async Task<ActionResult<TokenResponseDto>> GetToken([FromBody] TokenRequestDto requestDto)
+        [HttpPost("token/save/{applicationId}")]
+        public async Task<ActionResult<TokenResponseDto>> GetToken(string applicationId)
         {
             try
             {
                 string apiCall = $"PosHubAuthApi/token/save";
+                ClientsDto clientDetail = await _authRepository.GetClientDetailsByClientIdAsync(applicationId, apiCall);
+                TokenRequestDto requestDto = new TokenRequestDto();
+                requestDto.Grant_Type = "client_credentials";
+                requestDto.Client_Id = applicationId;
+                requestDto.Client_Secret = clientDetail.ClientSecret;
+                requestDto.Scope = "provisioning connections.write catalogs.read catalogs.write orders.read orders.write locations.read locations.write connections.read";
                 TokenResponseDto token = await _authRepository.GetAccessTokenAsync(requestDto, apiCall);
+
+                AccountLocationDto dto = new AccountLocationDto();
+                dto.Code = clientDetail.Code;
+                dto.AccountId = clientDetail.AccountId;
+                dto.LocationId = clientDetail.LocationId;
+                dto.ApplicationId = applicationId;
+                dto.ConnectionId = clientDetail.ConnectionId;
+                dto.AccessToken = token.AccessToken;
+                dto.RefreshToken = token.RefreshToken;
+                dto.Authorized = true;
+
+                bool result = await _authRepository.SaveOrUpdateAccountLocationAsync(dto, apiCall);
+
                 return Ok(token);
             }
             catch (Exception ex)
@@ -97,7 +114,7 @@ namespace PosHubApi.Controllers
             }
         }
 
-        [HttpGet("refresh_access_token")]
+        [HttpGet("refresh_access_token/{applicationId}")]
         public async Task<IActionResult> RefreshAccessToken(string applicationId)
         {
             string apiCall = $"PosHubAuthApi/refresh_access_token";
@@ -121,35 +138,34 @@ namespace PosHubApi.Controllers
             dto.RefreshToken = token.RefreshToken;
             dto.Authorized = clientDetail.Authorized;
 
-            string apiCall2 = "PosHubAuthApi/saveOrUpdateAccountLocation";
-            bool result = await _authRepository.SaveOrUpdateAccountLocationAsync(dto, apiCall2);
+            bool result = await _authRepository.SaveOrUpdateAccountLocationAsync(dto, apiCall);
 
             return Ok(token);
         }
 
-        [HttpPost("saveOrUpdateAccountLocation")]
-        public async Task<IActionResult> SaveOrUpdateAccountLocation([FromBody] AccountLocationDto dto)
-        {
-            if (dto == null)
-            {
-                return BadRequest(new { error = "Invalid data." });
-            }
+        // [HttpPost("saveOrUpdateAccountLocation")]
+        // public async Task<IActionResult> SaveOrUpdateAccountLocation([FromBody] AccountLocationDto dto)
+        // {
+        //     if (dto == null)
+        //     {
+        //         return BadRequest(new { error = "Invalid data." });
+        //     }
 
-            try
-            {
-                string apiCall = "PosHubAuthApi/saveOrUpdateAccountLocation";
-                bool result = await _authRepository.SaveOrUpdateAccountLocationAsync(dto, apiCall);
+        //     try
+        //     {
+        //         string apiCall = "PosHubAuthApi/saveOrUpdateAccountLocation";
+        //         bool result = await _authRepository.SaveOrUpdateAccountLocationAsync(dto, apiCall);
 
-                if (result)
-                    return Ok(new { message = "Account location saved successfully" });
-                else
-                    return StatusCode(500, new { error = "No rows affected" });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
+        //         if (result)
+        //             return Ok(new { message = "Account location saved successfully" });
+        //         else
+        //             return StatusCode(500, new { error = "No rows affected" });
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         return BadRequest(new { error = ex.Message });
+        //     }
+        // }
         
     }
 }

@@ -29,8 +29,8 @@
 
       <div class="mt-3 flex gap-2">
         <button *ngIf="!client.authorized" class="btn btn-success" (click)="authorize(client)">Authorize</button>
-        <button *ngIf="client.authorized" class="btn btn-success" (click)="syncCatalogToPosHub(client)">Sync Catalog</button>
-        <button *ngIf="client.authorized" class="btn btn-success" (click)="getCatalogProducts(client,'1')">Get Products</button>
+        <button *ngIf="client.authorized" class="btn btn-success" (click)="syncCatalogToPosHub(client.applicationId)">Sync Catalog</button>
+        <button *ngIf="client.authorized" class="btn btn-success" (click)="getCatalogProducts(client.applicationId,'1')">Get Products</button>
 
       </div>
     </div>

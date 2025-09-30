@@ -76,9 +76,9 @@ export class AuthRequestComponent implements OnInit {
     window.location.href = url;
   }
 
-  public syncCatalogToPosHub(client: ClientsDto): void {
-    console.log(client);
-    this.service.SyncCatalogToPosHub(client).subscribe({
+  public syncCatalogToPosHub(applicationId: string): void {
+    console.log(applicationId);
+    this.service.SyncCatalogToPosHub(applicationId).subscribe({
       next: (res) => {
         console.log('Catalog synced successfully:', res);
       },
@@ -88,9 +88,9 @@ export class AuthRequestComponent implements OnInit {
     });
   }
 
-  public getCatalogProducts(client: ClientsDto, limit:string): void {
-    console.log(client);
-    this.service.GetCatalogProducts(client, limit).subscribe({
+  public getCatalogProducts(applicationId: string, limit:string): void {
+    console.log(applicationId);
+    this.service.GetCatalogProducts(applicationId, limit).subscribe({
       next: (res) => {
         console.log('Get Catalog products successfully:', res);
       },

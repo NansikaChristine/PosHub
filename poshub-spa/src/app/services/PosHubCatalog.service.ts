@@ -18,13 +18,13 @@ export class PosHubCatalogService {
   
   constructor(private http: HttpClient) {}
 
-  public SyncCatalogToPosHub(client: ClientsDto): Observable<boolean>  {
-    const url = environment.apiUrl + 'Catalog/syncCatalogToPosHub/' + client.applicationId;
+  public SyncCatalogToPosHub(applicationId: string): Observable<boolean>  {
+    const url = environment.apiUrl + 'Catalog/syncCatalogToPosHub/' + applicationId;
     return this.http.post<boolean>(url, {});
   }
 
-  public GetCatalogProducts(client: ClientsDto, limit: string): Observable<CatalogProductsResponseDto> {
-    const url = environment.apiUrl + 'Catalog/catalogProducts/' + client.applicationId + '/' + limit;
+  public GetCatalogProducts(applicationId: string, limit: string): Observable<CatalogProductsResponseDto> {
+    const url = environment.apiUrl + 'Catalog/getCatalogProducts/' + applicationId + '/' + limit;
     return this.http.get<CatalogProductsResponseDto>(url, {});
   }
 

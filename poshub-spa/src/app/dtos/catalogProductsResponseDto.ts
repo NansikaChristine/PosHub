@@ -3,6 +3,7 @@ import { ProductDto } from "./productDto";
 export class CatalogProductsResponseDto {
   constructor(
     public hasNextPage: boolean,
-    public data: ProductDto[]
+    public data: ProductDto[],
+    public nextPageKey: string
   ) {}
 }
