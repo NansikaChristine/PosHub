@@ -13,12 +13,10 @@ namespace PosHubApi.Controllers
     public class CatalogController : ControllerBase
     {
         private readonly ICatalogRepository _catalogRrepository;
-        private readonly IPosHubAuthRepository _authRepository;
 
-        public CatalogController(ICatalogRepository catalogRrepository, IPosHubAuthRepository authRepository)
+        public CatalogController(ICatalogRepository catalogRrepository)
         {
             _catalogRrepository = catalogRrepository;
-            _authRepository = authRepository;
         }
 
         [HttpPost("pull")]
@@ -34,9 +32,7 @@ namespace PosHubApi.Controllers
         public async Task<ActionResult> SyncCatalogToPosHub(string applicationId)
         {
             string apiCall = $"Catalog/syncCatalogToPosHub";
-            ClientsDto clientDetail = await _authRepository.GetClientDetailsByClientIdAsync(applicationId, apiCall);
-
-            bool success = await _catalogRrepository.SyncCatalogToPosHub(clientDetail, apiCall);
+            bool success = await _catalogRrepository.SyncCatalogToPosHub(applicationId, apiCall);
 
             if (!success)
                 return BadRequest("Failed to sync catalog to PosHub.");
@@ -50,9 +46,7 @@ namespace PosHubApi.Controllers
             try
             {
                 string apiCall = $"Catalog/getCatalogProducts";
-                ClientsDto clientDetail = await _authRepository.GetClientDetailsByClientIdAsync(applicationId, apiCall);
-
-                CatalogProductsResponseDto products = await _catalogRrepository.GetCatalogProducts(clientDetail, limit, apiCall);
+                CatalogProductsResponseDto products = await _catalogRrepository.GetCatalogProducts(applicationId, limit, apiCall);
                 return Ok(products);
             }
             catch (Exception ex)
@@ -67,9 +61,7 @@ namespace PosHubApi.Controllers
             try
             {
                 string apiCall = $"Catalog/getCatalogProductByProductId";
-                ClientsDto clientDetail = await _authRepository.GetClientDetailsByClientIdAsync(applicationId, apiCall);
-
-                ProductDto product = await _catalogRrepository.GetCatalogProductByProductId(clientDetail, productId, apiCall);
+                ProductDto product = await _catalogRrepository.GetCatalogProductByProductId(applicationId, productId, apiCall);
                 return Ok(product);
             }
             catch (Exception ex)
@@ -81,14 +73,10 @@ namespace PosHubApi.Controllers
         [HttpPatch("updateCatalogProductByProductId/{applicationId}/{productId}")]
         public async Task<ActionResult<ProductDto>> UpdateCatalogProductByProductId(string applicationId, ProductUpdateRequestDto product, string productId)
         {
-            Console.WriteLine("applicatinId: " + applicationId);
-            Console.WriteLine("productId: " + productId);
             try
             {
                 string apiCall = $"Catalog/updateCatalogProductByProductId";
-                ClientsDto clientDetail = await _authRepository.GetClientDetailsByClientIdAsync(applicationId, apiCall);
-
-                ProductDto productRes = await _catalogRrepository.UpdateCatalogProductByProductId(clientDetail, product, productId, apiCall);
+                ProductDto productRes = await _catalogRrepository.UpdateCatalogProductByProductId(applicationId, product, productId, apiCall);
                 return Ok(productRes);
             }
             catch (Exception ex)
@@ -97,16 +85,14 @@ namespace PosHubApi.Controllers
             }
         }
 
-        [HttpPost("createCatalogProduct/{applicationId}")]
-        public async Task<ActionResult<ProductDto>> CreateCatalogProductByProductId(string applicationId, ProductDto product)
+        [HttpGet("getCatalogProductByPosRefId/{applicationId}/{posRefId}")]
+        public async Task<ActionResult<ProductDataResponseByPosRefDto>> GetCatalogProductByPosRefId(string applicationId, string posRefId)
         {
             try
             {
-                string apiCall = $"Catalog/createCatalogProduct";
-                ClientsDto clientDetail = await _authRepository.GetClientDetailsByClientIdAsync(applicationId, apiCall);
-
-                ProductDto productRes = await _catalogRrepository.CreateCatalogProductByProductId(clientDetail, product, apiCall);
-                return Ok(productRes);
+                string apiCall = $"Catalog/getCatalogProductByPosRefId";
+                List<ProductDataResponseByPosRefDto> product = await _catalogRrepository.GetCatalogProductByPosRefId(applicationId, posRefId, apiCall);
+                return Ok(product);
             }
             catch (Exception ex)
             {
@@ -114,24 +100,41 @@ namespace PosHubApi.Controllers
             }
         }
 
-        [HttpDelete("deleteCatalogProductByProductId/{applicationId}/{productId}")]
-        public async Task<ActionResult> DeleteCatalogProductByProductId(string applicationId, string productId)
-        {
-            try
-            {
-                string apiCall = $"Catalog/deleteCatalogProductByProductId";
-                ClientsDto clientDetail = await _authRepository.GetClientDetailsByClientIdAsync(applicationId, apiCall);
+        // [HttpPost("createCatalogProduct/{applicationId}")]
+        // public async Task<ActionResult<ProductDto>> CreateCatalogProductByProductId(string applicationId, ProductDto product)
+        // {
+        //     try
+        //     {
+        //         string apiCall = $"Catalog/createCatalogProduct";
+        //         ClientsDto clientDetail = await _authRepository.GetClientDetailsByClientIdAsync(applicationId, apiCall);
 
-                bool response = await _catalogRrepository.DeleteCatalogProductByProductId(clientDetail, productId, apiCall);
-                if (!response)
-                    return BadRequest("Failed to delete catalog product to PosHub.");
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
+        //         ProductDto productRes = await _catalogRrepository.CreateCatalogProductByProductId(clientDetail, product, apiCall);
+        //         return Ok(productRes);
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         return BadRequest(new { error = ex.Message });
+        //     }
+        // }
+
+        // [HttpDelete("deleteCatalogProductByProductId/{applicationId}/{productId}")]
+        // public async Task<ActionResult> DeleteCatalogProductByProductId(string applicationId, string productId)
+        // {
+        //     try
+        //     {
+        //         string apiCall = $"Catalog/deleteCatalogProductByProductId";
+        //         ClientsDto clientDetail = await _authRepository.GetClientDetailsByClientIdAsync(applicationId, apiCall);
+
+        //         bool response = await _catalogRrepository.DeleteCatalogProductByProductId(clientDetail, productId, apiCall);
+        //         if (!response)
+        //             return BadRequest("Failed to delete catalog product to PosHub.");
+        //         return Ok(response);
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         return BadRequest(new { error = ex.Message });
+        //     }
+        // }
     
     }
 }
