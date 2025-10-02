@@ -13,9 +13,11 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 builder.Services.AddHttpClient<IPosHubAuthRepository, PosHubAuthRepository>();
 builder.Services.AddHttpClient<ICatalogRepository, CatalogRepository>();
+builder.Services.AddHttpClient<IWebhookEventRepository, WebhookEventRepository>();
 builder.Services.AddSingleton<PosHubAuthDA>();
 builder.Services.AddSingleton<ApiErrorDA>();
 builder.Services.AddSingleton<CatalogDA>();
+builder.Services.AddSingleton<WebhookEventDA>();
 
 
 var app = builder.Build();
