@@ -1,14 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace PosHubApi.Dtos
 {
     public class ModifierDto
     {
+        [JsonPropertyName("catalogModifierId")]
         public string PosReference { get; set; }
-        public List<ModifierDto> Modifiers { get; set; } = new();
         public string Name { get; set; }
         public string Description { get; set; }
         public string PosVersion { get; set; }
@@ -24,10 +25,6 @@ namespace PosHubApi.Dtos
         public int Position { get; set; }
         public int MinPermitted { get; set; }
         public int MaxPermitted { get; set; }
-        public string DietaryRestriction { get; set; }
-        public string Spiciness { get; set; }
-        public List<string> Additives { get; set; } = new();
-        public List<string> Allergens { get; set; } = new();
         public NutritionalInfoDto NutritionalInfo { get; set; } = new();
         public List<SelectionDto> Selections { get; set; } = new();
 

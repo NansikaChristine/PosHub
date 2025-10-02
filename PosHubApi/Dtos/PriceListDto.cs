@@ -1,16 +1,23 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Text.Json.Serialization;
 
 namespace PosHubApi.Dtos
 {
     public class PriceListDto
     {
+        [JsonPropertyName("name")]
         public string Name { get; set; }
+
+        [JsonPropertyName("posReference")]
         public string PosReference { get; set; }
-        public string Type { get; set; } // FIXED or PERCENTAGE
+
+        [JsonPropertyName("type")]
+        public string Type { get; set; }
+
+        [JsonPropertyName("percentage")]
         public int Percentage { get; set; } = 0;
+
+        [JsonPropertyName("products")]
         public List<ProductDto> Products { get; set; }
     }
 }

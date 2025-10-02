@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace PosHubApi.Dtos
 {
@@ -23,8 +21,14 @@ namespace PosHubApi.Dtos
         [JsonPropertyName("description")]
         public string Description { get; set; }
 
+        [JsonPropertyName("type")]
+        public string Type { get; set; }
+
         [JsonPropertyName("modifierGroups")]
         public List<string> ModifierGroups { get; set; } = new();
+
+        [JsonPropertyName("parentId")]
+        public string ParentId { get; set; }
 
         [JsonPropertyName("originalImageUrl")]
         public string OriginalImageUrl { get; set; }
@@ -39,10 +43,10 @@ namespace PosHubApi.Dtos
         public bool ShowOnline { get; set; }
 
         [JsonPropertyName("selections")]
-        public List<SelectionDto> Selections { get; set; } = new();
+        public List<SelectionProductUpdateDto> Selections { get; set; } = new();
 
         [JsonPropertyName("taxRateIds")]
-        public List<Guid> TaxRateIds { get; set; } = new();
+        public List<string> TaxRateIds { get; set; } = new();
 
         [JsonPropertyName("price")]
         public int Price { get; set; }

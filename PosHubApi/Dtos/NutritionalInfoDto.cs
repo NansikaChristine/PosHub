@@ -14,5 +14,9 @@ namespace PosHubApi.Dtos
         public RangeDto SaturatedFat { get; set; } = new();
         public RangeDto Salt { get; set; } = new();
         public RangeDto Sugar { get; set; } = new();
+        public string DietaryRestriction { get; set; }
+        public string Spiciness { get; set; }
+        public List<string> Additives { get; set; }
+        public List<string> Allergens { get; set; }
     }
 }

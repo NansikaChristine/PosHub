@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace PosHubApi.Dtos
@@ -25,10 +26,6 @@ namespace PosHubApi.Dtos
         public List<string> Categories { get; set; } = new();
         public int Position { get; set; }
         public NutritionalInfoDto NutritionalInfo { get; set; } = new();
-        public string DietaryRestriction { get; set; }
-        public string Spiciness { get; set; }
-        public List<string> Additives { get; set; } = new();
-        public List<string> Allergens { get; set; } = new();
         public List<ServiceAvailabilityDto> ServiceAvailability { get; set; } = new();
         public List<string> ModifierGroups { get; set; } = new();
         public List<SelectionDto> Selections { get; set; } = new();

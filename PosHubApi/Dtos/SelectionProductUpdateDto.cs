@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace PosHubApi.Dtos
 {
-    public class SelectionDto
+    public class SelectionProductUpdateDto
     {
         [JsonPropertyName("catalogModifierGroupId")]
         public string PosReference { get; set; }
@@ -15,6 +15,6 @@ namespace PosHubApi.Dtos
         [JsonPropertyName("maxPermitted")]
         public int MaxPermitted { get; set; }
         [JsonPropertyName("modifiers")]
-        public List<ModifierDto> Modifiers { get; set; } = new();
+        public List<ModifierProductUpdateDto> Modifiers { get; set; } = new();
     }
 }

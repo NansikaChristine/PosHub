@@ -1,4 +1,3 @@
-
 namespace PosHubApi.Dtos
 {
     public class AccountLocationDto

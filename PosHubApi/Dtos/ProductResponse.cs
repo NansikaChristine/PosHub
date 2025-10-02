@@ -1,12 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Text.Json.Serialization;
+using PosHubApi.Dtos;
 
-namespace PosHubApi.Dtos
+public class ProductResponse
 {
-    public class ProductResponse
-    {
-        public ProductDto Data { get; set; }
-    }
+    [JsonPropertyName("data")]
+    public ProductDto Data { get; set; }
 }
