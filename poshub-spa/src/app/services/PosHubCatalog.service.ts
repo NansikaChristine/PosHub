@@ -4,6 +4,7 @@ import { HttpClient } from "@angular/common/http";
 import { Observable } from "rxjs";
 import { ClientsDto } from "../dtos/clientsDto";
 import { CatalogProductsResponseDto } from "../dtos/catalogProductsResponseDto";
+import { UpdateOrderEventRequestDto } from "../dtos/updateOrderEventRequestDto";
 
 /**
  * @description
@@ -31,5 +32,15 @@ export class PosHubCatalogService {
   public getClientsDetails(){
     const url = environment.apiUrl + 'PosHubAuthApi/apps';
     return this.http.get<any>(url, {}); 
+  }
+
+  public getCatalogProductsByPosRefId(applicationId: string, posRefId: string): Observable<any> {
+    const url = environment.apiUrl + 'Catalog/getCatalogProductByPosRefId/' + applicationId + '/' + posRefId;
+    return this.http.get<any>(url);
+  }
+
+  public updateOrderEventByOrderId(dto:UpdateOrderEventRequestDto): Observable<any> {
+    const url = environment.apiUrl + 'OrderEvent/updateOrderEventByOrderId';
+    return this.http.put<any>(url,dto);
   }
 }

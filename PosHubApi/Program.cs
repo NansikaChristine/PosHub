@@ -1,6 +1,7 @@
 using PosHubApi.Data.DataAccess;
 using PosHubApi.Data.Interfaces;
 using PosHubApi.Data.Repositories;
+using PosHubApi.Mapper;
 using PosHubApi.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,13 +12,18 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
+builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 builder.Services.AddHttpClient<IPosHubAuthRepository, PosHubAuthRepository>();
 builder.Services.AddHttpClient<ICatalogRepository, CatalogRepository>();
 builder.Services.AddHttpClient<IWebhookEventRepository, WebhookEventRepository>();
-builder.Services.AddSingleton<PosHubAuthDA>();
-builder.Services.AddSingleton<ApiErrorDA>();
-builder.Services.AddSingleton<CatalogDA>();
-builder.Services.AddSingleton<WebhookEventDA>();
+builder.Services.AddHttpClient<ILocationOrdersRepository, LocationOrdersRepository>();
+builder.Services.AddScoped<PosHubAuthDA>();
+builder.Services.AddScoped<ApiErrorDA>();
+builder.Services.AddScoped<CatalogDA>();
+builder.Services.AddScoped<WebhookEventDA>();
+builder.Services.AddScoped<OrderEventDA>();
+builder.Services.AddScoped<LogsDA>();
+builder.Services.AddHttpClient<IOrderEventRepository,OrderEventRepository>();
 
 
 var app = builder.Build();

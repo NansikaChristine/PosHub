@@ -1,20 +1,12 @@
 <div class="p-6">
   <div class="flex justify-between items-center mb-6">
     <h2 class="text-lg font-semibold">All Applications</h2>
-    <input
-      type="text"
-      [(ngModel)]="searchTerm"
-      (ngModelChange)="applyFilter()"
-      placeholder="Search"
-      class="border rounded px-4 py-2"
-    />
+    <input type="text"  name = "s" autocomplete="off" [(ngModel)]="searchTerm" (ngModelChange)="applyFilter()" placeholder="Search"
+      class="border rounded px-4 py-2" />
   </div>
 
   <div class="grid grid-cols-2 gap-6">
-    <div
-      *ngFor="let client of filteredClientDetails"
-      class="container mt-4 p-4 border rounded shadow-sm"
-    >
+    <div *ngFor="let client of filteredClientDetails" class="container mt-4 p-4 border rounded shadow-sm">
       <div class="flex items-center mb-2">
         <!-- <img
           src="assets/app-placeholder.png"
@@ -29,9 +21,43 @@
 
       <div class="mt-3 flex gap-2">
         <button *ngIf="!client.authorized" class="btn btn-success" (click)="authorize(client)">Authorize</button>
-        <button *ngIf="client.authorized" class="btn btn-success" (click)="syncCatalogToPosHub(client.applicationId)">Sync Catalog</button>
-        <button *ngIf="client.authorized" class="btn btn-success" (click)="getCatalogProducts(client.applicationId,'1')">Get Products</button>
+        <button *ngIf="client.authorized" class="btn btn-success"
+          (click)="syncCatalogToPosHub(client.applicationId)">Sync Catalog</button>
+        <button *ngIf="client.authorized" class="btn btn-success"
+          (click)="getCatalogProducts(client.applicationId,'1')">Get Products</button>
+        <!-- <input *ngIf="client.authorized" type="text" [(ngModel)]="orderSearchTerm" placeholder="Enter Order Id" class="form-control"
+          style="display:inline-block; width: 200px; margin-right: 10px;" /> -->
+        <!-- <button *ngIf="client.authorized" class="btn btn-success" (click)="getCatalogProductsByPosRefId(client.applicationId, orderSearchTerm)">
+          Search by PosRefId
+        </button> -->
+        <div *ngIf="client.authorized" class="mt-3 flex gap-2 align-items-center">
+          <input type="text"
+              name = "Order Id"
+              [(ngModel)]="orderInputs[client.applicationId].orderId"
+              autocomplete="off"
+              placeholder="Enter Order Id"
+              class="form-control"
+              style="width: 200px;"/>
 
+        <select [(ngModel)]="orderInputs[client.applicationId].status"
+                (change)="onStatusChange(client.applicationId)"
+                class="form-select" style="width: 160px;">
+          <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
+        </select>
+
+        <input *ngIf="orderInputs[client.applicationId].status === 'CANCELLED'"
+              type="text"
+              [(ngModel)]="orderInputs[client.applicationId].reason"
+              placeholder="Enter cancellation reason"
+              class="form-control" style="width: 220px;" />
+
+        <button class="btn btn-success"
+                (click)="updateOrderEvent(client.applicationId)"
+                [disabled]="!orderInputs[client.applicationId].orderId || (orderInputs[client.applicationId].status === 'CANCELLED' && !orderInputs[client.applicationId].reason)">
+          Update Order
+        </button>
+
+        </div>
       </div>
     </div>
   </div>

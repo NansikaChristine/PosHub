@@ -8,6 +8,7 @@ import { CatalogImportEntityDto } from '../../dtos/catalogImportEntityDto';
 import { ClientsDto } from '../../dtos/clientsDto';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { UpdateOrderEventRequestDto } from '../../dtos/updateOrderEventRequestDto';
 
 @Component({
   selector: 'app-auth-request',
@@ -23,6 +24,11 @@ export class AuthRequestComponent implements OnInit {
   searchTerm: string = '';
   filteredClientDetails: ClientsDto[] = [];
   authorized: boolean = false;
+  selectedProduct: any = null;
+  orderSearchTerm: string = '';
+  orderInputs: { [appId: string]: { orderId: string, status: string, reason: string } } = {};
+  statuses: string[] = ['ACCEPTED', 'COMPLETED', 'REJECTED', 'CANCELLED'];
+
 
   constructor(
     public service: PosHubCatalogService,
@@ -33,12 +39,61 @@ export class AuthRequestComponent implements OnInit {
   ngOnInit(): void {
     this.getClientDetails();
   }
+  onStatusChange(appId: string): void {
+    const inputs = this.orderInputs[appId];
+    if (inputs.status !== 'CANCELLED') {
+      inputs.reason = '';
+    }
+  }
+
+  updateOrderEvent(appId: string): void {
+    const inputs = this.orderInputs[appId];
+
+    const dto = new UpdateOrderEventRequestDto();
+    dto.orderId = inputs.orderId;
+    dto.status = inputs.status;
+    dto.cancellationReason = inputs.reason;
+
+    this.service.updateOrderEventByOrderId(dto).subscribe({
+      next: (response) => {
+        alert('Order event updated successfully!');
+        
+        inputs.orderId = '';
+        inputs.status = 'ACCEPTED';
+        inputs.reason = '';
+
+        this.onStatusChange(appId);
+        this.cdr.detectChanges();
+        console.log(response);
+      },
+      error: (err) => {
+        if (err.status === 404) {
+          alert(err.error?.message || 'Order not found.');
+        } else if (err.status === 400) {
+          alert(err.error?.message || 'Bad request.');
+        } else if (err.status === 500) {
+          alert('Server error: ' + (err.error?.message || 'Unknown error occurred.'));
+        } else {
+          alert('Unexpected error: ' + JSON.stringify(err.error));
+        }
+        console.error(err);
+      }
+    });
+  }
 
   public getClientDetails(): void {
     this.service.getClientsDetails().subscribe({
       next: (data: ClientsDto[]) => {
         this.service.clientDetails = data || [];
         this.filteredClientDetails = [...this.service.clientDetails];
+
+        this.filteredClientDetails.forEach(client => {
+          this.orderInputs[client.applicationId] = {
+            orderId: '',
+            status: 'ACCEPTED',
+            reason: ''
+          };
+        });
         this.cdr.detectChanges();
         console.log(this.filteredClientDetails);
       },
@@ -88,7 +143,7 @@ export class AuthRequestComponent implements OnInit {
     });
   }
 
-  public getCatalogProducts(applicationId: string, limit:string): void {
+  public getCatalogProducts(applicationId: string, limit: string): void {
     console.log(applicationId);
     this.service.GetCatalogProducts(applicationId, limit).subscribe({
       next: (res) => {
@@ -99,6 +154,21 @@ export class AuthRequestComponent implements OnInit {
       }
     });
   }
+
+  getCatalogProductsByPosRefId(applicationId: string, posRefId: string) {
+    if (!posRefId) {
+      alert('Please enter a PosRefId');
+      return;
+    }
+
+    this.service.getCatalogProductsByPosRefId(applicationId, posRefId)
+      .subscribe(response => {
+        this.selectedProduct = response;
+        console.log(response);
+      }, error => {
+        console.error('Error fetching product', error);
+        this.selectedProduct = null;
+      });
+  }
+
 }
-
-
