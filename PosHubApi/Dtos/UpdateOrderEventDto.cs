@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace PosHubApi.Dtos
 {
-    public class OrderEventDto
+    public class UpdateOrderEventDto
     {
         [JsonPropertyName("id")]
         public string Id { get; set; }
@@ -19,35 +19,17 @@ namespace PosHubApi.Dtos
         [JsonPropertyName("estimatedDeliveryTime")]
         public DateTime? EstimatedDeliveryTime { get; set; }
 
-        [JsonPropertyName("cancelledBy")]
-        public string CancelledBy { get; set; }
-
         [JsonPropertyName("subTotal")]
         public decimal SubTotal { get; set; }
 
         [JsonPropertyName("totalTax")]
         public decimal? TotalTax { get; set; }
 
-        [JsonPropertyName("createdAt")]
-        public DateTime CreatedAt { get; set; }
-
-        [JsonPropertyName("updatedAt")]
-        public DateTime UpdatedAt { get; set; }
-
-        [JsonPropertyName("rejectedAt")]
-        public DateTime? RejectedAt { get; set; }
-
-        [JsonPropertyName("completedAt")]
-        public DateTime? CompletedAt { get; set; }
-
         [JsonPropertyName("placedOn")]
         public DateTime PlacedOn { get; set; }
 
         [JsonPropertyName("isPaid")]
         public bool IsPaid { get; set; }
-
-        [JsonPropertyName("cancelledAt")]
-        public DateTime? CancelledAt { get; set; }
 
         [JsonPropertyName("cancellationReason")]
         public string CancellationReason { get; set; }
@@ -70,12 +52,6 @@ namespace PosHubApi.Dtos
         [JsonPropertyName("sourceName")]
         public string SourceName { get; set; }
 
-        [JsonPropertyName("clientName")]
-        public string ClientName { get; set; }
-
-        [JsonPropertyName("accountName")]
-        public string AccountName { get; set; }
-
         [JsonPropertyName("timezone")]
         public string Timezone { get; set; }
 
@@ -88,41 +64,11 @@ namespace PosHubApi.Dtos
         [JsonPropertyName("tableId")]
         public int? TableId { get; set; }
 
-        [JsonPropertyName("menuId")]
-        public string MenuId { get; set; }
-
         [JsonPropertyName("partnerId")]
         public string PartnerId { get; set; }
 
-        [JsonPropertyName("createdBy")]
-        public string CreatedBy { get; set; }
-
-        [JsonPropertyName("updatedBy")]
-        public string UpdatedBy { get; set; }
-
-        [JsonPropertyName("acceptedBy")]
-        public string AcceptedBy { get; set; }
-
-        [JsonPropertyName("resellerId")]
-        public string ResellerId { get; set; }
-
-        [JsonPropertyName("locationId")]
-        public string LocationId { get; set; }
-
-        [JsonPropertyName("accountId")]
-        public string AccountId { get; set; }
-
         [JsonPropertyName("estimatedPickupTime")]
         public DateTime? EstimatedPickupTime { get; set; }
-
-        [JsonPropertyName("actualPickupTime")]
-        public DateTime? ActualPickupTime { get; set; }
-
-        [JsonPropertyName("actualDeliveryTime")]
-        public DateTime? ActualDeliveryTime { get; set; }
-
-        [JsonPropertyName("acceptedAt")]
-        public DateTime? AcceptedAt { get; set; }
 
         [JsonPropertyName("driverStatus")]
         public string DriverStatus { get; set; }
@@ -135,12 +81,6 @@ namespace PosHubApi.Dtos
 
         [JsonPropertyName("driver")]
         public DriverDto Driver { get; set; }
-
-        [JsonPropertyName("clientId")]
-        public string ClientId { get; set; }
-
-        [JsonPropertyName("locationName")]
-        public string LocationName { get; set; }
 
         [JsonPropertyName("discounts")]
         public List<DiscountDto> Discounts { get; set; }
