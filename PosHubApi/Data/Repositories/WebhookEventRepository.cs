@@ -15,12 +15,14 @@ namespace PosHubApi.Data.Repositories
 {
     public class WebhookEventRepository : IWebhookEventRepository
     {
+        private readonly HttpClient _httpClient;
         private readonly PosHubAuthDA _posHubAuthDA;
         private readonly ApiErrorDA _apiErrorDA;
         private readonly WebhookEventDA _webhookEventDA;
 
-        public WebhookEventRepository(WebhookEventDA webhookEventDA,PosHubAuthDA posHubAuthDA, ApiErrorDA apiErrorDA)
+        public WebhookEventRepository(HttpClient httpClient, WebhookEventDA webhookEventDA,PosHubAuthDA posHubAuthDA, ApiErrorDA apiErrorDA)
         {
+            _httpClient = httpClient;
             _webhookEventDA = webhookEventDA;
             _posHubAuthDA = posHubAuthDA;
             _apiErrorDA = apiErrorDA;

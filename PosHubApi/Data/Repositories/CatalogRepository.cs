@@ -20,18 +20,23 @@ namespace PosHubApi.Data.Repositories
         private readonly CatalogDA _catalogDA;
         private readonly ApiErrorDA _apiErrorDA;
         private readonly PosHubAuthDA _posHubAuthDA;
+        private readonly LogsDA _logsDA;
+         private readonly string _baseUrl;
 
-        public CatalogRepository(HttpClient httpClient, IConfiguration configuration, CatalogDA catalogDA, ApiErrorDA apiErrorDA, PosHubAuthDA posHubAuthDA)
+        public CatalogRepository(HttpClient httpClient, IConfiguration configuration, CatalogDA catalogDA, ApiErrorDA apiErrorDA,
+         PosHubAuthDA posHubAuthDA, LogsDA logsDA)
         {
             _httpClient = httpClient;
             _connectionString = configuration.GetConnectionString("DefaultConnection");
             _catalogDA = catalogDA;
             _apiErrorDA = apiErrorDA;
             _posHubAuthDA = posHubAuthDA;
+            _baseUrl = configuration.GetSection("PosHubUrl").Value;
+            _logsDA = logsDA;
         }
         // public async Task<CatalogImportEntityDto> GetCatalogAsync(ClientsDto client)
         // {
-        //     string url = $"https://api-sit-dr.stage.tryposhub.com/v1/accounts/{client.AccountId}/locations/{client.LocationId}/connections/{client.ConnectionId}/pull";
+        //     string url = $"{_baseUrl}/v1/accounts/{client.AccountId}/locations/{client.LocationId}/connections/{client.ConnectionId}/pull";
 
         //     var result = new CatalogImportEntityDto();
 
@@ -439,10 +444,9 @@ namespace PosHubApi.Data.Repositories
         public async Task<bool> SyncCatalogToPosHub(string applicationId, string apiCall)
         {
             ClientsDto client = await _posHubAuthDA.GetClientDetailsByClientIdAsync(applicationId, apiCall);
+            string url = $"{_baseUrl}/v1/accounts/{client.AccountId}/locations/{client.LocationId}/connections/{client.ConnectionId}/pull";
             try
             {
-                string url = $"https://api-sit-dr.stage.tryposhub.com/v1/accounts/{client.AccountId}/locations/{client.LocationId}/connections/{client.ConnectionId}/pull";
-
                 HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url)
                 {
                     Content = new StringContent("{}", Encoding.UTF8, "application/json")
@@ -455,14 +459,35 @@ namespace PosHubApi.Data.Repositories
                 if (!response.IsSuccessStatusCode)
                 {
                     string body = await response.Content.ReadAsStringAsync();
+                    await _logsDA.InsertLogAsync(new LogModel
+                    {
+                        Url = url,
+                        Event = "Post",
+                        IsSuccess = false,
+                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}"
+                    });
                     return false;
                 }
 
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = url,
+                    Event = "Post",
+                    IsSuccess = true,
+                    FailMessage = ""
+                });
                 return true;
 
             }
             catch (Exception ex)
             {
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = url,
+                    Event = "Post",
+                    IsSuccess = false,
+                    FailMessage = ex.Message
+                });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
                     ErrorMessage = ex.Message,
@@ -489,18 +514,17 @@ namespace PosHubApi.Data.Repositories
             };
 
             string nextPageKey = null;
+            string url = $"{_baseUrl}/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products?limit={limit}";
+
+            if (!string.IsNullOrEmpty(nextPageKey))
+            {
+                url += $"&nextPageKey={nextPageKey}";
+            }
 
             try
             {
                 do
                 {
-                    string url = $"https://api-sit-dr.stage.tryposhub.com/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products?limit={limit}";
-
-                    if (!string.IsNullOrEmpty(nextPageKey))
-                    {
-                        url += $"&nextPageKey={nextPageKey}";
-                    }
-
                     HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
 
@@ -510,6 +534,13 @@ namespace PosHubApi.Data.Repositories
                     {
                         string body = await response.Content.ReadAsStringAsync();
                         
+                        await _logsDA.InsertLogAsync(new LogModel
+                        {
+                            Url = url,
+                            Event = "Get",
+                            IsSuccess = false,
+                            FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}"
+                        });
                         await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
                         {
                             ErrorMessage = $"API call failed with status {response.StatusCode}. Body: {body}",
@@ -533,11 +564,24 @@ namespace PosHubApi.Data.Repositories
                     nextPageKey = catalogResponse?.NextPageKey;
                 }
                 while (!string.IsNullOrEmpty(nextPageKey));
-
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = url,
+                    Event = "Get",
+                    IsSuccess = true,
+                    FailMessage = ""
+                });
                 return finalResponse;
             }
             catch (Exception ex)
             {
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = url,
+                    Event = "Get",
+                    IsSuccess = false,
+                    FailMessage = ""
+                });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
                     ErrorMessage = ex.Message,
@@ -557,9 +601,10 @@ namespace PosHubApi.Data.Repositories
         public async Task<ProductDto> GetCatalogProductByProductId(string applicationId, string productId, string apiCall)
         {
             ClientsDto client = await _posHubAuthDA.GetClientDetailsByClientIdAsync(applicationId, apiCall);
+            
+            string url = $"{_baseUrl}/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products/{productId}";
             try
             {
-                string url = $"https://api-sit-dr.stage.tryposhub.com/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products/{productId}";
 
                 HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
@@ -569,6 +614,14 @@ namespace PosHubApi.Data.Repositories
                 if (!response.IsSuccessStatusCode)
                 {
                     string body = await response.Content.ReadAsStringAsync();
+
+                    await _logsDA.InsertLogAsync(new LogModel
+                    {
+                        Url = url,
+                        Event = "Get",
+                        IsSuccess = false,
+                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}"
+                    });
                     await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
                     {
                         ErrorMessage = $"API call failed with status {response.StatusCode}. Body: {body}",
@@ -584,10 +637,24 @@ namespace PosHubApi.Data.Repositories
                 ProductResponse productResponse = JsonSerializer.Deserialize<ProductResponse>(json,
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                return productResponse.Data ?? new ProductDto(); ;
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = url,
+                    Event = "Get",
+                    IsSuccess = true,
+                    FailMessage = ""
+                });
+                return productResponse.Data ?? new ProductDto();
             }
             catch (Exception ex)
             {
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = url,
+                    Event = "Get",
+                    IsSuccess = false,
+                    FailMessage = ex.Message
+                });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
                     ErrorMessage = ex.Message,
@@ -608,10 +675,9 @@ namespace PosHubApi.Data.Repositories
         {
             ClientsDto client = await _posHubAuthDA.GetClientDetailsByClientIdAsync(applicationId, apiCall);
             Console.WriteLine("Client " + client);
+            string url = $"{_baseUrl}/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products?posReference={posRefId}";
             try
             {
-                string url = $"https://api-sit-dr.stage.tryposhub.com/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products?posReference={posRefId}";
-
                 HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
 
@@ -620,11 +686,20 @@ namespace PosHubApi.Data.Repositories
                 if (!response.IsSuccessStatusCode)
                 {
                     string body = await response.Content.ReadAsStringAsync();
+
+                    await _logsDA.InsertLogAsync(new LogModel
+                    {
+                        Url = url,
+                        Event = "Get",
+                        IsSuccess = false,
+                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}"
+                    });
+
                     await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
                     {
                         ErrorMessage = $"API call failed with status {response.StatusCode}. Body: {body}",
                         ApiCall = apiCall,
-                        MethodName = nameof(GetCatalogProductByProductId),
+                        MethodName = nameof(GetCatalogProductByPosRefId),
                         ErrorOccurredDateTime = DateTime.Now
                     });
                     return new List<ProductDataResponseByPosRefDto>();
@@ -646,11 +721,24 @@ namespace PosHubApi.Data.Repositories
 
                     await _catalogDA.UpdatePosHubProductIdsAsync(products, apiCall);
                 }
-
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = url,
+                    Event = "Get",
+                    IsSuccess = true,
+                    FailMessage = ""
+                });
                 return productResponseByPosRef.Data ?? new List<ProductDataResponseByPosRefDto>();
             }
             catch (Exception ex)
             {
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = url,
+                    Event = "Get",
+                    IsSuccess = false,
+                    FailMessage = ex.Message
+                });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
                     ErrorMessage = ex.Message,
@@ -658,7 +746,7 @@ namespace PosHubApi.Data.Repositories
                     StackTrace = ex.StackTrace,
                     InnerErrorMessage = ex.InnerException?.Message ?? "",
                     ApiCall = apiCall,
-                    MethodName = nameof(GetCatalogProductByProductId),
+                    MethodName = nameof(GetCatalogProductByPosRefId),
                     ErrorOccurredDateTime = DateTime.Now
                 };
 
@@ -670,11 +758,10 @@ namespace PosHubApi.Data.Repositories
         public async Task<ProductDto> UpdateCatalogProductByProductId(string applicationId, ProductUpdateRequestDto product, string productId, string apiCall)
         {
             ClientsDto client = await _posHubAuthDA.GetClientDetailsByClientIdAsync(applicationId, apiCall);
+            string url = $"{_baseUrl}/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products/{productId}";
             try
             {
-                string url = $"https://api-sit-dr.stage.tryposhub.com/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products/{productId}";
 
-                Console.WriteLine("Url: " + url);
                 HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Patch, url);
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
 
@@ -683,8 +770,6 @@ namespace PosHubApi.Data.Repositories
                     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                 };
-
-                // get respect model from data base for update product
 
                 string jsonContent = JsonSerializer.Serialize(product, options);
 
@@ -697,6 +782,15 @@ namespace PosHubApi.Data.Repositories
                 if (!response.IsSuccessStatusCode)
                 {
                     string body = await response.Content.ReadAsStringAsync();
+
+                    await _logsDA.InsertLogAsync(new LogModel
+                    {
+                        Url = url,
+                        Event = "Patch",
+                        IsSuccess = false,
+                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}"
+                    });
+                    
                     await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
                     {
                         ErrorMessage = $"API call failed with status {response.StatusCode}. Body: {body}",
@@ -709,15 +803,28 @@ namespace PosHubApi.Data.Repositories
 
                 string json = await response.Content.ReadAsStringAsync();
 
-                Console.WriteLine("Json", json);
-
                 ProductResponse productResponse = JsonSerializer.Deserialize<ProductResponse>(json,
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = url,
+                    Event = "Patch",
+                    IsSuccess = true,
+                    FailMessage = ""
+                });
+                
                 return productResponse.Data ?? new ProductDto();
             }
             catch (Exception ex)
             {
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = url,
+                    Event = "Patch",
+                    IsSuccess = false,
+                    FailMessage = ex.Message
+                });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
                     ErrorMessage = ex.Message,
@@ -738,7 +845,7 @@ namespace PosHubApi.Data.Repositories
     //     {
     //         try
     //         {
-    //             string url = $"https://api-sit-dr.stage.tryposhub.com/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products";
+    //             string url = $"{_baseUrl}/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products";
 
     //             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url);
     //             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
@@ -790,7 +897,7 @@ namespace PosHubApi.Data.Repositories
     //     {
     //         try
     //         {
-    //             string url = $"https://api-sit-dr.stage.tryposhub.com/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products/{productId}";
+    //             string url = $"{_baseUrl}/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products/{productId}";
         
     //             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Delete, url);
     //             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);

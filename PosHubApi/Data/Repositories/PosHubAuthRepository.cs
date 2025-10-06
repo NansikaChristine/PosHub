@@ -14,21 +14,25 @@ namespace PosHubApi.Data.Repositories
     {
         private readonly HttpClient _httpClient;
         private readonly PosHubAuthDA _posHubAuthDA;
+         private readonly string _baseUrl;
+        private readonly LogsDA _logsDA;
         private readonly ApiErrorDA _apiErrorDA;
 
-        public PosHubAuthRepository(HttpClient httpClient, PosHubAuthDA posHubAuthDA, ApiErrorDA apiErrorDA)
+        public PosHubAuthRepository(HttpClient httpClient, IConfiguration configuration, PosHubAuthDA posHubAuthDA, ApiErrorDA apiErrorDA, LogsDA logsDA)
         {
             _httpClient = httpClient;
             _posHubAuthDA = posHubAuthDA;
+            _logsDA = logsDA;
+            _baseUrl = configuration.GetSection("PosHubUrl").Value;
             _apiErrorDA = apiErrorDA;
 
         }
 
         public async Task<TokenResponseDto> GetAccessTokenAsync(TokenRequestDto requestDto, string apiCall)
         {
+            string url = $"{_baseUrl}/oauth2/token";
             try
             {
-                string url = "https://api-sit-dr.stage.tryposhub.com/oauth2/token";
 
                 Dictionary<string, string> formData = new Dictionary<string, string>
                 {
@@ -44,6 +48,13 @@ namespace PosHubApi.Data.Repositories
                 if (!response.IsSuccessStatusCode)
                 {
                     string errorBody = await response.Content.ReadAsStringAsync();
+                    await _logsDA.InsertLogAsync(new LogModel
+                    {
+                        Url = url,
+                        Event = "Post",
+                        IsSuccess = false,
+                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}"
+                    });
                     return new TokenResponseDto
                     {
                         ErrorMessage = $"Error fetching token: {response.StatusCode}, {errorBody}"
@@ -52,45 +63,39 @@ namespace PosHubApi.Data.Repositories
 
                 Stream responseStream = await response.Content.ReadAsStreamAsync();
                 TokenResponseDto tokenResponse = await JsonSerializer.DeserializeAsync<TokenResponseDto>(responseStream);
-                
+
                 if (tokenResponse == null)
+                {
+                    await _logsDA.InsertLogAsync(new LogModel
+                    {
+                        Url = url,
+                        Event = "Post",
+                        IsSuccess = false,
+                        FailMessage = $"Token response is null after successful status code: {(int)response.StatusCode} - {response.ReasonPhrase}"
+                    });
                     return new TokenResponseDto
                     {
                         ErrorMessage = "Token response is null"
                     };
-
-                // var requestedAt = DateTime.UtcNow;
-                // var tokenLog = new TokenLogModel
-                // {
-                //     ClientId = requestDto.Client_Id,
-                //     ClientSecret = requestDto.Client_Secret,
-                //     Scope = requestDto.Scope,
-                //     GrantType = requestDto.Grant_Type,
-                //     AccessToken = tokenResponse.AccessToken,
-                //     RefreshToken = tokenResponse.RefreshToken,
-                //     TokenType = tokenResponse.TokenType,
-                //     ExpiresIn = tokenResponse.ExpiresIn,
-                //     RequestedAt = requestedAt,
-                //     ExpiresAt = requestedAt.AddHours(24)
-                // };
-
-                // try
-                // {
-                //     bool isSuccess = await _posHubAuthDA.UpdateOrInsertTokenLog(tokenLog, apiCall);
-                //     if (!isSuccess)
-                //     {
-                //         tokenResponse.ErrorMessage = "Token fetched successfully but failed to save in database.";
-                //     }
-                // }
-                // catch (Exception ex)
-                // {
-                //     tokenResponse.ErrorMessage = $"Token fetched successfully but failed to save in database: {ex.Message}";
-                // }
-
+                }
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = url,
+                    Event = "Post",
+                    IsSuccess = true,
+                    FailMessage = ""
+                });
                 return tokenResponse;
             }
             catch (Exception ex)
             {
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = url,
+                    Event = "Post",
+                    IsSuccess = false,
+                    FailMessage = ex.Message
+                });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
                     ErrorMessage = ex.Message,
@@ -109,9 +114,10 @@ namespace PosHubApi.Data.Repositories
         }
         public async Task<TokenResponseDto> RefreshAccessTokenAsync(RefreshAccessTokenRequestDto request, string apiCall)
         {
+            
+            string _tokenUrl = $"{_baseUrl}/oauth2/token";
             try
             {
-                string _tokenUrl = "https://api-sit-dr.stage.tryposhub.com/oauth2/token";
                 Dictionary<string, string> formData = new Dictionary<string, string>
                 {
                     { "grant_type", request.Grant_Type },
@@ -126,6 +132,13 @@ namespace PosHubApi.Data.Repositories
                 if (!response.IsSuccessStatusCode)
                 {
                     string errorBody = await response.Content.ReadAsStringAsync();
+                    await _logsDA.InsertLogAsync(new LogModel
+                    {
+                        Url = _tokenUrl,
+                        Event = "Post",
+                        IsSuccess = false,
+                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}"
+                    });
                     return new TokenResponseDto
                     {
                         ErrorMessage = $"Error fetching refresh token: {response.StatusCode}, {errorBody}"
@@ -136,42 +149,38 @@ namespace PosHubApi.Data.Repositories
                 TokenResponseDto tokenResponse = await JsonSerializer.DeserializeAsync<TokenResponseDto>(responseStream);
 
                 if (tokenResponse == null)
+                {
+                    await _logsDA.InsertLogAsync(new LogModel
+                    {
+                        Url = _tokenUrl,
+                        Event = "Post",
+                        IsSuccess = false,
+                        FailMessage = $"Token response is null after successful status code: {(int)response.StatusCode} - {response.ReasonPhrase}"
+                    });
                     return new TokenResponseDto
                     {
                         ErrorMessage = "Refresh Token response is null"
                     };
-                // var requestedAt = DateTime.UtcNow;
-                // var tokenLog = new TokenLogModel
-                // {
-                //     ClientId = request.Client_Id,
-                //     ClientSecret = request.Client_Secret,
-                //     Scope = tokenResponse.Scope,
-                //     GrantType = request.Grant_Type,
-                //     AccessToken = tokenResponse.AccessToken,
-                //     RefreshToken = tokenResponse.RefreshToken,
-                //     TokenType = tokenResponse.TokenType,
-                //     ExpiresIn = tokenResponse.ExpiresIn,
-                //     RequestedAt = requestedAt,
-                //     ExpiresAt = requestedAt.AddHours(24)
-                // };
-
-                // try
-                // {
-                //     bool isSuccess = await _posHubAuthDA.UpdateOrInsertTokenLog(tokenLog, apiCall);
-                //     if (!isSuccess)
-                //     {
-                //         tokenResponse.ErrorMessage = "Refresh Token fetched successfully but failed to save in database.";
-                //     }
-                // }
-                // catch (Exception ex)
-                // {
-                //     tokenResponse.ErrorMessage = $"Refresh Token fetched successfully but failed to save in database: {ex.Message}";
-                // }
+                }
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = _tokenUrl,
+                    Event = "Post",
+                    IsSuccess = true,
+                    FailMessage = ""
+                });
 
                 return tokenResponse;
             }
             catch (Exception ex)
             {
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = _tokenUrl,
+                    Event = "Post",
+                    IsSuccess = false,
+                    FailMessage = ex.Message
+                });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
                     ErrorMessage = ex.Message,
