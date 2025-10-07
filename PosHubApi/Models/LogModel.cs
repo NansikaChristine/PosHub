@@ -11,6 +11,8 @@ namespace PosHubApi.Models
         public string Event { get; set; }
         public bool IsSuccess { get; set; }
         public string FailMessage { get; set; }
+        public string RequestBody { get; set; }
+        public string ApplicationId { get; set; }
     }
 
 }

@@ -15,6 +15,9 @@ namespace PosHubApi.Dtos
         [JsonPropertyName("locationId")]
         public string LocationId { get; set; }
 
+        [JsonPropertyName("clientId")]
+        public string ApplicationId { get; set; }
+
 
         [JsonPropertyName("newState")]
         public OrderEventDto NewState { get; set; }

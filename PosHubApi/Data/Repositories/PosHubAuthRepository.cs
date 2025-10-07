@@ -51,9 +51,11 @@ namespace PosHubApi.Data.Repositories
                     await _logsDA.InsertLogAsync(new LogModel
                     {
                         Url = url,
-                        Event = "Post",
+                        Event = "GetAccessTokenAsync",
                         IsSuccess = false,
-                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}"
+                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}",
+                        RequestBody = "",
+                        ApplicationId = requestDto.Client_Id
                     });
                     return new TokenResponseDto
                     {
@@ -69,9 +71,11 @@ namespace PosHubApi.Data.Repositories
                     await _logsDA.InsertLogAsync(new LogModel
                     {
                         Url = url,
-                        Event = "Post",
+                        Event = "GetAccessTokenAsync",
                         IsSuccess = false,
-                        FailMessage = $"Token response is null after successful status code: {(int)response.StatusCode} - {response.ReasonPhrase}"
+                        FailMessage = $"Token response is null after successful status code: {(int)response.StatusCode} - {response.ReasonPhrase}",
+                        RequestBody = "",
+                        ApplicationId = requestDto.Client_Id
                     });
                     return new TokenResponseDto
                     {
@@ -81,9 +85,11 @@ namespace PosHubApi.Data.Repositories
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
-                    Event = "Post",
+                    Event = "GetAccessTokenAsync",
                     IsSuccess = true,
-                    FailMessage = ""
+                    FailMessage = "",
+                    RequestBody = "",
+                    ApplicationId = requestDto.Client_Id
                 });
                 return tokenResponse;
             }
@@ -92,9 +98,11 @@ namespace PosHubApi.Data.Repositories
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
-                    Event = "Post",
+                    Event = "GetAccessTokenAsync",
                     IsSuccess = false,
-                    FailMessage = ex.Message
+                    FailMessage = ex.Message,
+                    RequestBody = "",
+                    ApplicationId = requestDto.Client_Id
                 });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
@@ -135,9 +143,11 @@ namespace PosHubApi.Data.Repositories
                     await _logsDA.InsertLogAsync(new LogModel
                     {
                         Url = _tokenUrl,
-                        Event = "Post",
+                        Event = "RefreshAccessTokenAsync",
                         IsSuccess = false,
-                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}"
+                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}",
+                        RequestBody = "",
+                        ApplicationId = request.Client_Id
                     });
                     return new TokenResponseDto
                     {
@@ -153,9 +163,11 @@ namespace PosHubApi.Data.Repositories
                     await _logsDA.InsertLogAsync(new LogModel
                     {
                         Url = _tokenUrl,
-                        Event = "Post",
+                        Event = "RefreshAccessTokenAsync",
                         IsSuccess = false,
-                        FailMessage = $"Token response is null after successful status code: {(int)response.StatusCode} - {response.ReasonPhrase}"
+                        FailMessage = $"Token response is null after successful status code: {(int)response.StatusCode} - {response.ReasonPhrase}",
+                        RequestBody = "",
+                        ApplicationId = request.Client_Id
                     });
                     return new TokenResponseDto
                     {
@@ -165,9 +177,11 @@ namespace PosHubApi.Data.Repositories
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = _tokenUrl,
-                    Event = "Post",
+                    Event = "RefreshAccessTokenAsync",
                     IsSuccess = true,
-                    FailMessage = ""
+                    FailMessage = "",
+                    RequestBody = "",
+                    ApplicationId = request.Client_Id
                 });
 
                 return tokenResponse;
@@ -177,9 +191,11 @@ namespace PosHubApi.Data.Repositories
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = _tokenUrl,
-                    Event = "Post",
+                    Event = "RefreshAccessTokenAsync",
                     IsSuccess = false,
-                    FailMessage = ex.Message
+                    FailMessage = ex.Message,
+                    RequestBody = "",
+                    ApplicationId = request.Client_Id
                 });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
