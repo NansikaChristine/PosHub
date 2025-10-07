@@ -20,8 +20,19 @@ namespace PosHubApi.Data.DataAccess
         public async Task<bool> InsertLogAsync(LogModel log)
         {
             const string sql = @"
-                INSERT INTO [dbo].[Logs] ([Url], [Event], [IsSuccess], [Failmessage])
-                VALUES (@Url, @Event, @IsSuccess, @Failmessage);";
+                MERGE [dbo].[Logs] AS target
+                USING (SELECT @Event AS Event, @ApplicationId AS ApplicationId) AS source
+                ON target.Event = source.Event AND target.ApplicationId = source.ApplicationId
+                WHEN MATCHED THEN
+                    UPDATE SET 
+                        [Url] = @Url,
+                        [IsSuccess] = @IsSuccess,
+                        [Failmessage] = @Failmessage,
+                        [RequestModel] = @RequestModel,
+                        [InsertedAt] = GetDate()
+                WHEN NOT MATCHED THEN
+                    INSERT ([Url], [Event], [IsSuccess], [Failmessage], [RequestModel], [ApplicationId])
+                    VALUES (@Url, @Event, @IsSuccess, @Failmessage, @RequestModel, @ApplicationId); ";
 
             try
             {
@@ -35,6 +46,8 @@ namespace PosHubApi.Data.DataAccess
                         command.Parameters.AddWithValue("@Event", (object)log.Event ?? DBNull.Value);
                         command.Parameters.AddWithValue("@IsSuccess", log.IsSuccess);
                         command.Parameters.AddWithValue("@Failmessage", (object)log.FailMessage ?? DBNull.Value);
+                        command.Parameters.AddWithValue("@RequestModel", log.RequestBody);
+                        command.Parameters.AddWithValue("@ApplicationId", log.ApplicationId);
 
                         int affectedRows = await command.ExecuteNonQueryAsync();
                         return affectedRows > 0;

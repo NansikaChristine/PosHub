@@ -47,9 +47,11 @@ namespace PosHubApi.Data.Repositories
                     await _logsDA.InsertLogAsync(new LogModel
                     {
                         Url = url,
-                        Event = "Get",
+                        Event = "GetOrderByOrderId",
                         IsSuccess = false,
-                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}"
+                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}",
+                        RequestBody = body,
+                        ApplicationId = applicationId
                     });
                     await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
                     {
@@ -69,9 +71,11 @@ namespace PosHubApi.Data.Repositories
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
-                    Event = "Get",
+                    Event = "GetOrderByOrderId",
                     IsSuccess = true,
-                    FailMessage = ""
+                    FailMessage = "",
+                    RequestBody = "",
+                    ApplicationId = applicationId
                 });
                 return orderResponse.Data ?? new OrderEventDto();
             }
@@ -80,9 +84,11 @@ namespace PosHubApi.Data.Repositories
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
-                    Event = "Get",
+                    Event = "GetOrderByOrderId",
                     IsSuccess = false,
-                    FailMessage = ex.Message
+                    FailMessage = ex.Message,
+                    RequestBody = "",
+                    ApplicationId = applicationId
                 });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {

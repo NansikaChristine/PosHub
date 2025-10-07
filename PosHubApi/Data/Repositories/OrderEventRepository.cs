@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -20,15 +21,17 @@ namespace PosHubApi.Data.Repositories
         private readonly ApiErrorDA _apiErrorDA;
         private readonly OrderEventDA _orderEventDA;
         private readonly LogsDA _logsDA;
+        private readonly PosHubAuthDA _posHubAuthDA;
          private readonly string _baseUrl;
         private readonly IMapper _mapper;
 
-        public OrderEventRepository(HttpClient httpClient, IConfiguration configuration, ApiErrorDA apiErrorDA, OrderEventDA orderEventDA, IMapper mapper, LogsDA logsDA)
+        public OrderEventRepository(HttpClient httpClient, IConfiguration configuration, ApiErrorDA apiErrorDA, OrderEventDA orderEventDA, IMapper mapper, LogsDA logsDA, PosHubAuthDA posHubAuthDA)
         {
             _httpClient = httpClient;
             _connectionString = configuration.GetConnectionString("DefaultConnection");
             _apiErrorDA = apiErrorDA;
             _orderEventDA = orderEventDA;
+            _posHubAuthDA = posHubAuthDA;
             _mapper = mapper;
             _baseUrl = configuration.GetSection("PosHubUrl").Value;
             _logsDA = logsDA;
@@ -37,6 +40,7 @@ namespace PosHubApi.Data.Repositories
         public async Task<OrderEventDto> UpdateOrderEventByOrderIdAsync(string orderId, string status, string cancellationReason, string apiCall)
         {
             OrderWebhookEventResponseDto existingDto = await _orderEventDA.GetOrderEventFromNewStateAsync(orderId, apiCall);
+            ClientsDto client = await _posHubAuthDA.GetClientDetailsByClientIdAsync(existingDto.ApplicationId, apiCall);
 
             if (existingDto == null || string.IsNullOrWhiteSpace(existingDto.NewState?.Id))
             return null;
@@ -44,27 +48,37 @@ namespace PosHubApi.Data.Repositories
             existingDto.NewState.Status = status;
             existingDto.NewState.CancellationReason = cancellationReason;
 
-            var jsonContent = JsonSerializer.Serialize(existingDto, new JsonSerializerOptions
+            string jsonContent = JsonSerializer.Serialize(existingDto, new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 WriteIndented = false
             });
-            // string url = $"http://localhost:5091/api/OrderEvent/UpdateOrderEvent/{orderId}";
-            string url = $"{_baseUrl}/v1/accounts/{existingDto.AccountId}/locations/{existingDto.LocationId}/orders/{orderId}";
+            string url = $"http://localhost:5091/api/OrderEvent/UpdateOrderEvent/{orderId}";
+            // string url = $"{_baseUrl}/v1/accounts/{existingDto.AccountId}/locations/{existingDto.LocationId}/orders/{orderId}";
 
-            var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+            StringContent content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-            // var response = await _httpClient.PutAsync(url, content);
-            var response = await _httpClient.PatchAsync(url, content);
+            var response = await _httpClient.PutAsync(url, content);
+
+            // var request = new HttpRequestMessage(new HttpMethod("PATCH"), url)
+            // {
+            //     Content = new StringContent(jsonContent, Encoding.UTF8, "application/json")
+            // };
+            // request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
+
+            // HttpResponseMessage response = await _httpClient.SendAsync(request);
+
 
             if (response.IsSuccessStatusCode)
             {
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
-                    Event = "Patch",
+                    Event = "UpdateOrderEventByOrderIdAsync",
                     IsSuccess = true,
-                    FailMessage = ""
+                    FailMessage = "",
+                    RequestBody = "",
+                    ApplicationId = existingDto.ApplicationId,
                 });
                 var responseStream = await response.Content.ReadAsStreamAsync();
 
@@ -81,9 +95,11 @@ namespace PosHubApi.Data.Repositories
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
-                    Event = "Patch",
+                    Event = "UpdateOrderEventByOrderIdAsync",
                     IsSuccess = false,
-                    FailMessage = $"NotFound - {response.ReasonPhrase}. Response body: {errorContent}"
+                    FailMessage = $"NotFound - {response.ReasonPhrase}. Response body: {errorContent}",
+                    RequestBody = jsonContent,
+                    ApplicationId = existingDto.ApplicationId
                 });
                 return null;
             }
@@ -93,9 +109,11 @@ namespace PosHubApi.Data.Repositories
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
-                    Event = "Patch",
+                    Event = "UpdateOrderEventByOrderIdAsync",
                     IsSuccess = false,
-                    FailMessage = $"Failed to update order event. Status: {response.StatusCode}, Error: {error}"
+                    FailMessage = $"Failed to update order event. Status: {response.StatusCode}, Error: {error}",
+                    RequestBody = jsonContent,
+                    ApplicationId = existingDto.ApplicationId
                 });
 
                 throw new Exception($"Failed to update order event. Status: {response.StatusCode}, Error: {error}");

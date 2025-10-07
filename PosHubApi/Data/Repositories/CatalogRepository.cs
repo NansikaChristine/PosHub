@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Data.SqlClient;
+using Microsoft.OpenApi.Expressions;
 using PosHubApi.Data.DataAccess;
 using PosHubApi.Data.Interfaces;
 using PosHubApi.Dtos;
@@ -462,9 +463,11 @@ namespace PosHubApi.Data.Repositories
                     await _logsDA.InsertLogAsync(new LogModel
                     {
                         Url = url,
-                        Event = "Post",
+                        Event = "SyncCatalogToPosHub",
                         IsSuccess = false,
-                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}"
+                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}",
+                        RequestBody = body,
+                        ApplicationId = applicationId
                     });
                     return false;
                 }
@@ -472,9 +475,11 @@ namespace PosHubApi.Data.Repositories
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
-                    Event = "Post",
+                    Event = "SyncCatalogToPosHub",
                     IsSuccess = true,
-                    FailMessage = ""
+                    FailMessage = "",
+                    RequestBody = "",
+                    ApplicationId = applicationId
                 });
                 return true;
 
@@ -484,9 +489,11 @@ namespace PosHubApi.Data.Repositories
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
-                    Event = "Post",
+                    Event = "SyncCatalogToPosHub",
                     IsSuccess = false,
-                    FailMessage = ex.Message
+                    FailMessage = ex.Message,
+                    RequestBody = "",
+                    ApplicationId = applicationId
                 });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
@@ -537,9 +544,11 @@ namespace PosHubApi.Data.Repositories
                         await _logsDA.InsertLogAsync(new LogModel
                         {
                             Url = url,
-                            Event = "Get",
+                            Event = "GetCatalogProducts",
                             IsSuccess = false,
-                            FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}"
+                            FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}",
+                            RequestBody = body,
+                            ApplicationId = applicationId
                         });
                         await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
                         {
@@ -567,9 +576,11 @@ namespace PosHubApi.Data.Repositories
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
-                    Event = "Get",
+                    Event = "GetCatalogProducts",
                     IsSuccess = true,
-                    FailMessage = ""
+                    FailMessage = "",
+                    RequestBody = "",
+                    ApplicationId = applicationId
                 });
                 return finalResponse;
             }
@@ -578,9 +589,11 @@ namespace PosHubApi.Data.Repositories
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
-                    Event = "Get",
+                    Event = "GetCatalogProducts",
                     IsSuccess = false,
-                    FailMessage = ""
+                    FailMessage = "",
+                    RequestBody = "",
+                    ApplicationId = applicationId
                 });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
@@ -618,9 +631,11 @@ namespace PosHubApi.Data.Repositories
                     await _logsDA.InsertLogAsync(new LogModel
                     {
                         Url = url,
-                        Event = "Get",
+                        Event = "GetCatalogProductByProductId",
                         IsSuccess = false,
-                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}"
+                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}",
+                        RequestBody = body,
+                        ApplicationId = applicationId
                     });
                     await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
                     {
@@ -640,9 +655,11 @@ namespace PosHubApi.Data.Repositories
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
-                    Event = "Get",
+                    Event = "GetCatalogProductByProductId",
                     IsSuccess = true,
-                    FailMessage = ""
+                    FailMessage = "",
+                    RequestBody = "",
+                    ApplicationId = applicationId
                 });
                 return productResponse.Data ?? new ProductDto();
             }
@@ -651,9 +668,11 @@ namespace PosHubApi.Data.Repositories
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
-                    Event = "Get",
+                    Event = "GetCatalogProductByProductId",
                     IsSuccess = false,
-                    FailMessage = ex.Message
+                    FailMessage = ex.Message,
+                    RequestBody = "",
+                    ApplicationId = applicationId
                 });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
@@ -690,9 +709,11 @@ namespace PosHubApi.Data.Repositories
                     await _logsDA.InsertLogAsync(new LogModel
                     {
                         Url = url,
-                        Event = "Get",
+                        Event = "GetCatalogProductByPosRefId",
                         IsSuccess = false,
-                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}"
+                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}",
+                        RequestBody = body,
+                        ApplicationId = applicationId
                     });
 
                     await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
@@ -724,9 +745,11 @@ namespace PosHubApi.Data.Repositories
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
-                    Event = "Get",
+                    Event = "GetCatalogProductByPosRefId",
                     IsSuccess = true,
-                    FailMessage = ""
+                    FailMessage = "",
+                    RequestBody = "",
+                    ApplicationId = applicationId
                 });
                 return productResponseByPosRef.Data ?? new List<ProductDataResponseByPosRefDto>();
             }
@@ -735,9 +758,11 @@ namespace PosHubApi.Data.Repositories
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
-                    Event = "Get",
+                    Event = "GetCatalogProductByPosRefId",
                     IsSuccess = false,
-                    FailMessage = ex.Message
+                    FailMessage = ex.Message,
+                    RequestBody = "",
+                    ApplicationId = applicationId
                 });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
@@ -786,9 +811,11 @@ namespace PosHubApi.Data.Repositories
                     await _logsDA.InsertLogAsync(new LogModel
                     {
                         Url = url,
-                        Event = "Patch",
+                        Event = "UpdateCatalogProductByProductId",
                         IsSuccess = false,
-                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}"
+                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}",
+                        RequestBody = body,
+                        ApplicationId = applicationId
                     });
                     
                     await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
@@ -809,9 +836,11 @@ namespace PosHubApi.Data.Repositories
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
-                    Event = "Patch",
+                    Event = "UpdateCatalogProductByProductId",
                     IsSuccess = true,
-                    FailMessage = ""
+                    FailMessage = "",
+                    RequestBody = "",
+                    ApplicationId = applicationId
                 });
                 
                 return productResponse.Data ?? new ProductDto();
@@ -821,9 +850,11 @@ namespace PosHubApi.Data.Repositories
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
-                    Event = "Patch",
+                    Event = "UpdateCatalogProductByProductId",
                     IsSuccess = false,
-                    FailMessage = ex.Message
+                    FailMessage = ex.Message,
+                    RequestBody = "",
+                    ApplicationId = applicationId
                 });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {

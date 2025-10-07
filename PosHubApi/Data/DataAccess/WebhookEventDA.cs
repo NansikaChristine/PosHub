@@ -23,13 +23,12 @@ namespace PosHubApi.Data.DataAccess
         public async Task<bool> OrderWebhookEvent(OrderWebhookEventRequestDto xWebhookRequest, string apiCall)
         {
             string sql = @"
-                        IF EXISTS (SELECT 1 FROM OrderWebhookEvents WHERE EventId = @EventId)
+                        IF EXISTS (SELECT 1 FROM OrderWebhookEvents WHERE EventId = @EventId and OrderId = @OrderId)
                         BEGIN
                             UPDATE OrderWebhookEvents
                             SET
                                 AccountId = @AccountId,
                                 ClientId = @ClientId,
-                                OrderId = @OrderId,
                                 LocationId = @LocationId,
                                 EventTime = @EventTime,
                                 ConnectionId = @ConnectionId,
@@ -37,7 +36,7 @@ namespace PosHubApi.Data.DataAccess
                                 ObjectType = @ObjectType,
                                 NewState = @NewState,
                                 PreviousState = @PreviousState
-                            WHERE EventId = @EventId
+                            WHERE EventId = @EventId and OrderId = @OrderId
                         END
                         ELSE
                         BEGIN

@@ -20,7 +20,7 @@ namespace PosHubApi.Data.DataAccess
         public async Task<OrderWebhookEventResponseDto> GetOrderEventFromNewStateAsync(string orderId, string apiCall)
         {
             string sql = @"
-                SELECT TOP 1 [NewState], AccountId, LocationId
+                SELECT TOP 1 [NewState], AccountId, LocationId, ClientId
                 FROM [dbo].[OrderWebhookEvents] WITH (NOLOCK)
                 WHERE [OrderId] = @OrderId AND [NewState] IS NOT NULL";
 
@@ -42,6 +42,7 @@ namespace PosHubApi.Data.DataAccess
                                 string json = reader.IsDBNull(0) ? null : reader.GetString(0);
                                 string accountId = reader.IsDBNull(1) ? null : reader.GetString(1);
                                 string locationId = reader.IsDBNull(2) ? null : reader.GetString(2);
+                                string applicationId = reader.IsDBNull(3) ? null : reader.GetString(3);
 
                                 if (!string.IsNullOrWhiteSpace(json))
                                 {
@@ -56,7 +57,8 @@ namespace PosHubApi.Data.DataAccess
                                         {
                                             AccountId = accountId,
                                             LocationId = locationId,
-                                            NewState = orderEvent ?? new OrderEventDto()
+                                            NewState = orderEvent ?? new OrderEventDto(),
+                                            ApplicationId = applicationId
                                         };
                                     }
                                     catch (Exception deserializationEx)
@@ -81,7 +83,8 @@ namespace PosHubApi.Data.DataAccess
                             {
                                 AccountId = null,
                                 LocationId = null,
-                                NewState = new OrderEventDto()
+                                NewState = new OrderEventDto(),
+                                ApplicationId = ""
                             };
                         }
                     }
