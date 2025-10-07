@@ -22,7 +22,7 @@ namespace PosHubApi.Controllers
         [HttpPost("pull")]
         public async Task<ActionResult<CatalogImportEntityDto>> PullCatalog()
         {
-            string apiCall = $"Catalog/syncCatalogToPosHub";
+            string apiCall = $"Catalog/pull";
             CatalogImportEntityDto catalog = await _catalogRrepository.GetPullCatalogAsync(apiCall);
 
             return Ok(catalog);
@@ -31,7 +31,7 @@ namespace PosHubApi.Controllers
         [HttpPost("syncCatalogToPosHub/{applicationId}")]
         public async Task<ActionResult> SyncCatalogToPosHub(string applicationId)
         {
-            string apiCall = $"Catalog/syncCatalogToPosHub";
+            string apiCall = $"Catalog/syncCatalogToPosHub/{applicationId}";
             bool success = await _catalogRrepository.SyncCatalogToPosHub(applicationId, apiCall);
 
             if (!success)
@@ -45,7 +45,7 @@ namespace PosHubApi.Controllers
         {
             try
             {
-                string apiCall = $"Catalog/getCatalogProducts";
+                string apiCall = $"Catalog/getCatalogProducts/{applicationId}/{limit}";
                 CatalogProductsResponseDto products = await _catalogRrepository.GetCatalogProducts(applicationId, limit, apiCall);
                 return Ok(products);
             }
@@ -60,7 +60,7 @@ namespace PosHubApi.Controllers
         {
             try
             {
-                string apiCall = $"Catalog/getCatalogProductByProductId";
+                string apiCall = $"Catalog/getCatalogProductByProductId/{applicationId}/{productId}";
                 ProductDto product = await _catalogRrepository.GetCatalogProductByProductId(applicationId, productId, apiCall);
                 return Ok(product);
             }
@@ -75,7 +75,7 @@ namespace PosHubApi.Controllers
         {
             try
             {
-                string apiCall = $"Catalog/updateCatalogProductByProductId";
+                string apiCall = $"Catalog/updateCatalogProductByProductId/{applicationId}/{productId}";
                 ProductDto productRes = await _catalogRrepository.UpdateCatalogProductByProductId(applicationId, product, productId, apiCall);
                 return Ok(productRes);
             }
@@ -90,7 +90,7 @@ namespace PosHubApi.Controllers
         {
             try
             {
-                string apiCall = $"Catalog/getCatalogProductByPosRefId";
+                string apiCall = $"Catalog/getCatalogProductByPosRefId/{applicationId}/{posRefId}";
                 List<ProductDataResponseByPosRefDto> product = await _catalogRrepository.GetCatalogProductByPosRefId(applicationId, posRefId, apiCall);
                 return Ok(product);
             }

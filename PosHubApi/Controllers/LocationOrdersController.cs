@@ -24,7 +24,7 @@ namespace PosHubApi.Controllers
         {
             try
             {
-                string apiCall = $"LocationOrders/getOrderByOrderId";
+                string apiCall = $"LocationOrders/getOrderByOrderId/{applicationId}/{orderId}";
                 OrderEventDto order = await _locationOrdersRrepository.GetOrderByOrderId(applicationId, orderId, apiCall);
                 return Ok(order);
             }

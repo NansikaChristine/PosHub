@@ -85,7 +85,7 @@ namespace PosHubApi.Controllers
         {
             try
             {
-                string apiCall = $"PosHubAuthApi/token/save";
+                string apiCall = $"PosHubAuthApi/token/save/{applicationId}";
                 ClientsDto clientDetail = await _authRepository.GetClientDetailsByClientIdAsync(applicationId, apiCall);
                 TokenRequestDto requestDto = new TokenRequestDto();
                 requestDto.Grant_Type = "client_credentials";
@@ -117,7 +117,7 @@ namespace PosHubApi.Controllers
         [HttpGet("refresh_access_token/{applicationId}")]
         public async Task<IActionResult> RefreshAccessToken(string applicationId)
         {
-            string apiCall = $"PosHubAuthApi/refresh_access_token";
+            string apiCall = $"PosHubAuthApi/refresh_access_token/{applicationId}";
             ClientsDto clientDetail = await _authRepository.GetClientDetailsByClientIdAsync(applicationId, apiCall);
             
             RefreshAccessTokenRequestDto requestDto = new RefreshAccessTokenRequestDto();

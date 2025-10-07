@@ -59,11 +59,12 @@ namespace PosHubApi.Controllers
                 });
             }
         }
-        
+
 
         [HttpPut("UpdateOrderEvent/{orderId}")]
-        public async Task<IActionResult> UpdateOrderEvent(string orderId, [FromBody]  OrderWebhookEventResponseDto updateDto)
+        public async Task<IActionResult> UpdateOrderEvent(string orderId, [FromBody] OrderWebhookEventResponseDto updateDto)
         {
+            string apiCall = $"OrderEvent/updateOrderEvent/{orderId}";
             if (string.IsNullOrWhiteSpace(orderId))
                 return BadRequest("Order ID is required.");
 
@@ -72,7 +73,7 @@ namespace PosHubApi.Controllers
 
             try
             {
-                OrderEventDto result = await _orderEventRepository.UpdateOrderEventNewStateAsync(orderId, updateDto, $"PUT /api/order-event/{orderId}");
+                OrderEventDto result = await _orderEventRepository.UpdateOrderEventNewStateAsync(orderId, updateDto, apiCall);
 
                 if (result == null || string.IsNullOrWhiteSpace(result.Id))
                     return NotFound($"Order with ID {orderId} was not found.");

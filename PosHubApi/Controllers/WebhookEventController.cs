@@ -20,11 +20,13 @@ namespace PosHubApi.Controllers
     {
         private readonly IWebhookEventRepository _webhookEventRrepository;
         private readonly ApiErrorDA _apiErrorDA;
+        private readonly LogsDA _logsDA;
 
-        public WebhookEventController(IWebhookEventRepository webhookEventRrepository, ApiErrorDA apiErrorDA)
+        public WebhookEventController(IWebhookEventRepository webhookEventRrepository, ApiErrorDA apiErrorDA,LogsDA logsDA)
         {
             _webhookEventRrepository = webhookEventRrepository;
             _apiErrorDA = apiErrorDA;
+            _logsDA = logsDA;
 
         }
 
@@ -39,27 +41,45 @@ namespace PosHubApi.Controllers
             using (var reader = new StreamReader(Request.Body, Encoding.UTF8, leaveOpen: true))
             {
                 body = await reader.ReadToEndAsync();
-                Request.Body.Position = 0; // reset stream
+                Request.Body.Position = 0;
             }
-    
 
             string xWebhookSignature = Request.Headers["X-Webhook-Signature"];
 
-            string apiCall = $"WebhookEvent/orderWebhookEvent";
-            
+            OrderWebhookEventRequestDto xWebhookRequest = JsonSerializer.Deserialize<OrderWebhookEventRequestDto>(body);
+
+            string apiCall = $"WebhookEvent/orderWebhookEvent_";
+
             try
             {
                 bool valid = await _webhookEventRrepository.ValidateSignature(xWebhookSignature, body, apiCall);
 
                 if (!valid)
                 {
-                    return StatusCode(401, "Invalid signature");
+                    await _logsDA.InsertLogAsync(new LogModel
+                    {
+                        Url = "",
+                        Event = "OrderWebhookEvent",
+                        IsSuccess = false,
+                        FailMessage = "Invalid signature",
+                        RequestBody = body,
+                        ApplicationId = xWebhookRequest.ClientId,
+                    });
+                    return StatusCode(401, "Unauthorized");
                 }
-
-                OrderWebhookEventRequestDto xWebhookRequest = JsonSerializer.Deserialize<OrderWebhookEventRequestDto>(body);
 
                 if (xWebhookRequest == null)
                 {
+                    await _logsDA.InsertLogAsync(new LogModel
+                    {
+                        Url = "",
+                        Event = "OrderWebhookEvent",
+                        IsSuccess = false,
+                        FailMessage = "Request body is missing or invalid.",
+                        ApplicationId = xWebhookRequest.ClientId,
+                        RequestBody = body
+                    });
+
                     return BadRequest(new
                     {
                         statusCode = 400,
@@ -71,23 +91,49 @@ namespace PosHubApi.Controllers
 
                 string json = JsonSerializer.Serialize(xWebhookRequest);
 
-                // Optional: Log or use the JSON
                 Console.WriteLine(json);
-            
+
                 bool success = await _webhookEventRrepository.OrderWebhookEvent(xWebhookRequest, apiCall);
 
                 if (success)
                 {
+                    await _logsDA.InsertLogAsync(new LogModel
+                    {
+                        Url = "",
+                        Event = "OrderWebhookEvent",
+                        IsSuccess = true,
+                        FailMessage = "",
+                        RequestBody = "",
+                        ApplicationId = xWebhookRequest.ClientId
+                    });
                     return Ok();
                 }
                 else
                 {
+                    await _logsDA.InsertLogAsync(new LogModel
+                    {
+                        Url = "",
+                        Event = "OrderWebhookEvent",
+                        IsSuccess = false,
+                        FailMessage = "",
+                        RequestBody = json,
+                        ApplicationId = xWebhookRequest.ClientId
+                    });
                     return StatusCode(500, "");
                 }
 
             }
             catch (RateLimitExceededException ex)
             {
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = "",
+                    Event = "OrderWebhookEvent",
+                    IsSuccess = false,
+                    FailMessage = ex.Message,
+                    ApplicationId = xWebhookRequest.ClientId,
+                    RequestBody = body
+                });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
                     ErrorMessage = ex.Message,
@@ -108,6 +154,15 @@ namespace PosHubApi.Controllers
             }
             catch (BadGatewayException ex)
             {
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = "",
+                    Event = "OrderWebhookEvent",
+                    IsSuccess = false,
+                    FailMessage = ex.Message,
+                    ApplicationId = xWebhookRequest.ClientId,
+                    RequestBody = body
+                });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
                     ErrorMessage = ex.Message,
@@ -128,6 +183,15 @@ namespace PosHubApi.Controllers
             }
             catch (ServiceUnavailableException ex)
             {
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = "",
+                    Event = "OrderWebhookEvent",
+                    IsSuccess = false,
+                    FailMessage = ex.Message,
+                    ApplicationId = xWebhookRequest.ClientId,
+                    RequestBody = body
+                });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
                     ErrorMessage = ex.Message,
@@ -148,6 +212,15 @@ namespace PosHubApi.Controllers
             }
             catch (GatewayTimeoutException ex)
             {
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = "",
+                    Event = "OrderWebhookEvent",
+                    IsSuccess = false,
+                    FailMessage = ex.Message,
+                    ApplicationId = xWebhookRequest.ClientId,
+                    RequestBody = body
+                });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
                     ErrorMessage = ex.Message,
@@ -168,6 +241,15 @@ namespace PosHubApi.Controllers
             }
             catch (Exception ex)
             {
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = "",
+                    Event = "OrderWebhookEvent",
+                    IsSuccess = false,
+                    FailMessage = ex.Message,
+                    ApplicationId = xWebhookRequest.ClientId,
+                    RequestBody = body
+                });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
                     ErrorMessage = ex.Message,
