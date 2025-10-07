@@ -23,15 +23,17 @@ namespace PosHubApi.Data.Repositories
         private readonly LogsDA _logsDA;
         private readonly PosHubAuthDA _posHubAuthDA;
          private readonly string _baseUrl;
+        private readonly WebhookEventDA _webhookEventDA;
         private readonly IMapper _mapper;
 
-        public OrderEventRepository(HttpClient httpClient, IConfiguration configuration, ApiErrorDA apiErrorDA, OrderEventDA orderEventDA, IMapper mapper, LogsDA logsDA, PosHubAuthDA posHubAuthDA)
+        public OrderEventRepository(HttpClient httpClient, IConfiguration configuration, ApiErrorDA apiErrorDA, OrderEventDA orderEventDA, IMapper mapper, LogsDA logsDA, PosHubAuthDA posHubAuthDA, WebhookEventDA webhookEventDA)
         {
             _httpClient = httpClient;
             _connectionString = configuration.GetConnectionString("DefaultConnection");
             _apiErrorDA = apiErrorDA;
             _orderEventDA = orderEventDA;
             _posHubAuthDA = posHubAuthDA;
+            _webhookEventDA = webhookEventDA;
             _mapper = mapper;
             _baseUrl = configuration.GetSection("PosHubUrl").Value;
             _logsDA = logsDA;
@@ -58,7 +60,7 @@ namespace PosHubApi.Data.Repositories
 
             StringContent content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PutAsync(url, content);
+            HttpResponseMessage response = await _httpClient.PutAsync(url, content);
 
             // var request = new HttpRequestMessage(new HttpMethod("PATCH"), url)
             // {
@@ -71,6 +73,12 @@ namespace PosHubApi.Data.Repositories
 
             if (response.IsSuccessStatusCode)
             {
+                string reqForUpdate = await response.Content.ReadAsStringAsync();
+                OrderWebhookEventRequestDto webhookEvent = JsonSerializer.Deserialize<OrderWebhookEventRequestDto>(reqForUpdate);
+                if (webhookEvent != null)
+                {
+                    await _webhookEventDA.OrderWebhookEvent(webhookEvent, apiCall);
+                }
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
@@ -80,9 +88,9 @@ namespace PosHubApi.Data.Repositories
                     RequestBody = "",
                     ApplicationId = existingDto.ApplicationId,
                 });
-                var responseStream = await response.Content.ReadAsStreamAsync();
+                Stream responseStream = await response.Content.ReadAsStreamAsync();
 
-                var updatedDto = await JsonSerializer.DeserializeAsync<OrderEventDto>(responseStream, new JsonSerializerOptions
+                OrderEventDto updatedDto = await JsonSerializer.DeserializeAsync<OrderEventDto>(responseStream, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
                 });
@@ -91,7 +99,7 @@ namespace PosHubApi.Data.Repositories
             }
             else if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
+                string errorContent = await response.Content.ReadAsStringAsync();
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
@@ -105,7 +113,7 @@ namespace PosHubApi.Data.Repositories
             }
             else
             {
-                var error = await response.Content.ReadAsStringAsync();
+                string error = await response.Content.ReadAsStringAsync();
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
