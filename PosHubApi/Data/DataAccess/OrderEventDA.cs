@@ -107,9 +107,8 @@ namespace PosHubApi.Data.DataAccess
             }
         }
 
-
         #endregion GetOrderEventsFromNewState
-        
+
         #region UpdateNewStateByOrderIdAsync
         public async Task<bool> UpdateNewStateByOrderIdAsync(string orderId, string newStateJson, string apiCall)
         {
@@ -150,6 +149,123 @@ namespace PosHubApi.Data.DataAccess
             }
         }
         #endregion
+        
+        #region GetOrderEvent
+        public async Task<OrderWebhookEventRequestDto> GetOrderEventAsync(string orderId, string apiCall)
+        {
+            string sql = @"
+                SELECT TOP 1 [NewState], AccountId, LocationId, ClientId, EventId, EventTime, ConnectionId, EventType,
+                [PreviousState], ObjectType 
+                FROM [dbo].[OrderWebhookEvents] WITH (NOLOCK)
+                WHERE [OrderId] = @OrderId AND [NewState] IS NOT NULL";
+
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_defaultConnectionString))
+                {
+                    await connection.OpenAsync();
+
+                    using (SqlCommand command = new SqlCommand(sql, connection))
+                    {
+                        command.CommandTimeout = 60 * 60;
+                        command.Parameters.AddWithValue("@OrderId", orderId);
+
+                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                string jsonNewState = reader.IsDBNull(0) ? null : reader.GetString(0);
+                                string accountId = reader.IsDBNull(1) ? null : reader.GetString(1);
+                                string locationId = reader.IsDBNull(2) ? null : reader.GetString(2);
+                                string clientId = reader.IsDBNull(3) ? null : reader.GetString(3);
+                                string eventId = reader.IsDBNull(4) ? null : reader.GetString(4);
+                                DateTime? eventTime = reader.IsDBNull(5) ? null : reader.GetDateTime(5);
+                                string connectionId = reader.IsDBNull(6) ? null : reader.GetString(6);
+                                string eventType = reader.IsDBNull(7) ? null : reader.GetString(7);
+                                string jsonPreviousState = reader.IsDBNull(8) ? null : reader.GetString(8);
+                                string objectType = reader.IsDBNull(9) ? null : reader.GetString(9);
+
+                                if (!string.IsNullOrWhiteSpace(jsonNewState))
+                                {
+                                    try
+                                    {
+                                        var orderEventNewState = JsonSerializer.Deserialize<OrderEventDto>(jsonNewState, new JsonSerializerOptions
+                                        {
+                                            PropertyNameCaseInsensitive = true
+                                        });
+                                        var orderEventPreviousState = JsonSerializer.Deserialize<OrderEventDto>(jsonPreviousState, new JsonSerializerOptions
+                                        {
+                                            PropertyNameCaseInsensitive = true
+                                        });
+
+                                        return new OrderWebhookEventRequestDto
+                                        {
+                                            AccountId = accountId,
+                                            LocationId = locationId,
+                                            NewState = orderEventNewState ?? new OrderEventDto(),
+                                            ClientId = clientId,
+                                            EventId = eventId,
+                                            EventTime = eventTime,
+                                            ConnectionId = connectionId,
+                                            EventType = eventType,
+                                            PreviousState = orderEventPreviousState ?? new OrderEventDto(),
+                                            ObjectType = objectType,
+                                            OrderId = orderId
+                                        };
+                                    }
+                                    catch (Exception deserializationEx)
+                                    {
+                                        await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
+                                        {
+                                            ErrorMessage = deserializationEx.Message,
+                                            ErrorSource = deserializationEx.Source,
+                                            StackTrace = deserializationEx.StackTrace,
+                                            InnerErrorMessage = deserializationEx.InnerException?.Message ?? "",
+                                            ApiCall = apiCall,
+                                            MethodName = nameof(GetOrderEventFromNewStateAsync),
+                                            ErrorOccurredDateTime = DateTime.Now
+                                        });
+
+                                        throw;
+                                    }
+                                }
+                            }
+
+                            return new OrderWebhookEventRequestDto
+                            {
+                                AccountId = null,
+                                LocationId = null,
+                                NewState = new OrderEventDto(),
+                                ClientId = null,
+                                EventId = null,
+                                EventTime = null,
+                                ConnectionId = null,
+                                EventType = null,
+                                PreviousState = new OrderEventDto(),
+                                ObjectType = null,
+                                OrderId = null
+                            };
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = apiCall,
+                    MethodName = nameof(GetOrderEventFromNewStateAsync),
+                    ErrorOccurredDateTime = DateTime.Now
+                });
+
+                throw;
+            }
+        }
+        #endregion GetOrderEvent
 
     }
 }

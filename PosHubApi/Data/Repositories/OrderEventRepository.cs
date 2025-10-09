@@ -73,12 +73,14 @@ namespace PosHubApi.Data.Repositories
 
             if (response.IsSuccessStatusCode)
             {
-                string reqForUpdate = await response.Content.ReadAsStringAsync();
-                OrderWebhookEventRequestDto webhookEvent = JsonSerializer.Deserialize<OrderWebhookEventRequestDto>(reqForUpdate);
-                if (webhookEvent != null)
-                {
-                    await _webhookEventDA.OrderWebhookEvent(webhookEvent, apiCall);
-                }
+                // OrderWebhookEventRequestDto existOrderDto = await _orderEventDA.GetOrderEventAsync(orderId, apiCall);
+                // string reqForUpdate = await response.Content.ReadAsStringAsync();
+                // OrderEventDto webhookEvent = JsonSerializer.Deserialize<OrderEventDto>(reqForUpdate);
+                // existOrderDto.NewState = webhookEvent;
+                // if (existOrderDto != null)
+                // {
+                //     await _webhookEventDA.OrderWebhookEvent(existOrderDto, apiCall);
+                // }
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,
