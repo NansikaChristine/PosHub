@@ -42,10 +42,10 @@ namespace PosHubApi.Data.Repositories
         public async Task<OrderEventDto> UpdateOrderEventByOrderIdAsync(string orderId, string status, string cancellationReason, string apiCall)
         {
             OrderWebhookEventResponseDto existingDto = await _orderEventDA.GetOrderEventFromNewStateAsync(orderId, apiCall);
-            ClientsDto client = await _posHubAuthDA.GetClientDetailsByClientIdAsync(existingDto.ApplicationId, apiCall);
-
             if (existingDto == null || string.IsNullOrWhiteSpace(existingDto.NewState?.Id))
-            return null;
+                return null;
+            
+            ClientsDto client = await _posHubAuthDA.GetClientDetailsByClientIdAsync(existingDto.ApplicationId, apiCall);
 
             existingDto.NewState.Status = status;
             existingDto.NewState.CancellationReason = cancellationReason;
@@ -56,20 +56,16 @@ namespace PosHubApi.Data.Repositories
                 WriteIndented = false
             });
             string url = $"http://localhost:5091/api/OrderEvent/UpdateOrderEvent/{orderId}";
-            // string url = $"{_baseUrl}/v1/accounts/{existingDto.AccountId}/locations/{existingDto.LocationId}/orders/{orderId}";
-
             StringContent content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-
             HttpResponseMessage response = await _httpClient.PutAsync(url, content);
-
+            
+            // string url = $"{_baseUrl}/v1/accounts/{existingDto.AccountId}/locations/{existingDto.LocationId}/orders/{orderId}";
             // var request = new HttpRequestMessage(new HttpMethod("PATCH"), url)
             // {
             //     Content = new StringContent(jsonContent, Encoding.UTF8, "application/json")
             // };
-            // request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
-
+            // request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "");
             // HttpResponseMessage response = await _httpClient.SendAsync(request);
-
 
             if (response.IsSuccessStatusCode)
             {
@@ -98,6 +94,20 @@ namespace PosHubApi.Data.Repositories
                 });
 
                 return updatedDto;
+            }
+            else if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                string errorContent = await response.Content.ReadAsStringAsync();
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = url,
+                    Event = "UpdateOrderEventByOrderIdAsync",
+                    IsSuccess = false,
+                    FailMessage = $"Unauthorized - {response.ReasonPhrase}. Response body: {errorContent}",
+                    RequestBody = jsonContent,
+                    ApplicationId = existingDto.ApplicationId
+                });
+                return null;
             }
             else if (response.StatusCode == HttpStatusCode.NotFound)
             {
@@ -129,7 +139,6 @@ namespace PosHubApi.Data.Repositories
                 throw new Exception($"Failed to update order event. Status: {response.StatusCode}, Error: {error}");
             }
         }
-
 
         public async Task<OrderEventDto> UpdateOrderEventNewStateAsync(string orderId, OrderWebhookEventResponseDto updateDto, string apiCall)
         {
