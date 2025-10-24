@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -38,7 +39,7 @@ namespace PosHubApi.Controllers
         [HttpGet("code")]
         public async Task<ActionResult> GetAuthCode(string code, string account_id,string location_id, string applicationId, string connectionId)
         {
-            var redirectUrl = "http://localhost:4200";
+            string redirectUrl = "http://localhost:4200";
             try
             { 
                 string apiCall = $"PosHubAuthApi/code";
@@ -166,6 +167,22 @@ namespace PosHubApi.Controllers
         //         return BadRequest(new { error = ex.Message });
         //     }
         // }
-        
+
+        [HttpPut("deleteAuthorize/{applicationId}")]
+        public async Task<ActionResult<bool>> DeleteAuthorize(string applicationId)
+        {
+            string apiCall = $"PosHubAuthApi/deleteAuthorize/{applicationId}";
+            bool response = await _authRepository.DeleteAuthorize(applicationId, apiCall);
+
+            if (response)
+            {
+                return Ok(true);
+            }
+            else
+            {
+                return BadRequest(false); // HTTP 404
+            }
+            
+        }
     }
 }

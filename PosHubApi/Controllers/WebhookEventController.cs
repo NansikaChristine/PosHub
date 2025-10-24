@@ -33,12 +33,13 @@ namespace PosHubApi.Controllers
         [HttpPost("orderWebhookEvent_")]
         public async Task<ActionResult> OrderWebhookEvent()
         {
-            // using var reader = new StreamReader(Request.Body);
+            Console.WriteLine("Order webhook event trigger");
+            // using StreamReader reader = new StreamReader(Request.Body);
             // string body = await reader.ReadToEndAsync();
             Request.EnableBuffering();
 
             string body;
-            using (var reader = new StreamReader(Request.Body, Encoding.UTF8, leaveOpen: true))
+            using (StreamReader reader = new StreamReader(Request.Body, Encoding.UTF8, leaveOpen: true))
             {
                 body = await reader.ReadToEndAsync();
                 Request.Body.Position = 0;
@@ -58,12 +59,13 @@ namespace PosHubApi.Controllers
                 {
                     await _logsDA.InsertLogAsync(new LogModel
                     {
-                        Url = "",
+                        Url = "http://localhost:5091/api/WebhookEvent/orderWebhookEvent_",
                         Event = "OrderWebhookEvent",
                         IsSuccess = false,
                         FailMessage = "Invalid signature",
                         RequestBody = body,
                         ApplicationId = xWebhookRequest.ClientId,
+                        UniqueId = xWebhookRequest.EventId
                     });
                     return StatusCode(401, "Unauthorized");
                 }
@@ -72,12 +74,13 @@ namespace PosHubApi.Controllers
                 {
                     await _logsDA.InsertLogAsync(new LogModel
                     {
-                        Url = "",
+                        Url = "http://localhost:5091/api/WebhookEvent/orderWebhookEvent_",
                         Event = "OrderWebhookEvent",
                         IsSuccess = false,
                         FailMessage = "Request body is missing or invalid.",
                         ApplicationId = xWebhookRequest.ClientId,
-                        RequestBody = body
+                        RequestBody = body,
+                        UniqueId = xWebhookRequest.EventId
                     });
 
                     return BadRequest(new
@@ -99,12 +102,13 @@ namespace PosHubApi.Controllers
                 {
                     await _logsDA.InsertLogAsync(new LogModel
                     {
-                        Url = "",
+                        Url = "http://localhost:5091/api/WebhookEvent/orderWebhookEvent_",
                         Event = "OrderWebhookEvent",
                         IsSuccess = true,
                         FailMessage = "",
                         RequestBody = "",
-                        ApplicationId = xWebhookRequest.ClientId
+                        ApplicationId = xWebhookRequest.ClientId,
+                        UniqueId = xWebhookRequest.EventId
                     });
                     return Ok();
                 }
@@ -112,12 +116,13 @@ namespace PosHubApi.Controllers
                 {
                     await _logsDA.InsertLogAsync(new LogModel
                     {
-                        Url = "",
+                        Url = "http://localhost:5091/api/WebhookEvent/orderWebhookEvent_",
                         Event = "OrderWebhookEvent",
                         IsSuccess = false,
                         FailMessage = "",
                         RequestBody = json,
-                        ApplicationId = xWebhookRequest.ClientId
+                        ApplicationId = xWebhookRequest.ClientId,
+                        UniqueId = xWebhookRequest.EventId
                     });
                     return StatusCode(500, "");
                 }
@@ -127,12 +132,13 @@ namespace PosHubApi.Controllers
             {
                 await _logsDA.InsertLogAsync(new LogModel
                 {
-                    Url = "",
+                    Url = "http://localhost:5091/api/WebhookEvent/orderWebhookEvent_",
                     Event = "OrderWebhookEvent",
                     IsSuccess = false,
                     FailMessage = ex.Message,
                     ApplicationId = xWebhookRequest.ClientId,
-                    RequestBody = body
+                    RequestBody = body,
+                    UniqueId = xWebhookRequest.EventId
                 });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
@@ -142,7 +148,8 @@ namespace PosHubApi.Controllers
                     InnerErrorMessage = ex.InnerException?.Message ?? "",
                     ApiCall = apiCall,
                     MethodName = nameof(OrderWebhookEvent),
-                    ErrorOccurredDateTime = DateTime.Now
+                    ErrorOccurredDateTime = DateTime.Now,
+                    ClientId = xWebhookRequest.ClientId
                 };
 
                 await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
@@ -156,12 +163,13 @@ namespace PosHubApi.Controllers
             {
                 await _logsDA.InsertLogAsync(new LogModel
                 {
-                    Url = "",
+                    Url = "http://localhost:5091/api/WebhookEvent/orderWebhookEvent_",
                     Event = "OrderWebhookEvent",
                     IsSuccess = false,
                     FailMessage = ex.Message,
                     ApplicationId = xWebhookRequest.ClientId,
-                    RequestBody = body
+                    RequestBody = body,
+                    UniqueId = xWebhookRequest.EventId
                 });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
@@ -171,7 +179,8 @@ namespace PosHubApi.Controllers
                     InnerErrorMessage = ex.InnerException?.Message ?? "",
                     ApiCall = apiCall,
                     MethodName = nameof(OrderWebhookEvent),
-                    ErrorOccurredDateTime = DateTime.Now
+                    ErrorOccurredDateTime = DateTime.Now,
+                    ClientId = xWebhookRequest.ClientId
                 };
 
                 await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
@@ -185,12 +194,13 @@ namespace PosHubApi.Controllers
             {
                 await _logsDA.InsertLogAsync(new LogModel
                 {
-                    Url = "",
+                    Url = "http://localhost:5091/api/WebhookEvent/orderWebhookEvent_",
                     Event = "OrderWebhookEvent",
                     IsSuccess = false,
                     FailMessage = ex.Message,
                     ApplicationId = xWebhookRequest.ClientId,
-                    RequestBody = body
+                    RequestBody = body,
+                    UniqueId = xWebhookRequest.EventId
                 });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
@@ -200,7 +210,8 @@ namespace PosHubApi.Controllers
                     InnerErrorMessage = ex.InnerException?.Message ?? "",
                     ApiCall = apiCall,
                     MethodName = nameof(OrderWebhookEvent),
-                    ErrorOccurredDateTime = DateTime.Now
+                    ErrorOccurredDateTime = DateTime.Now,
+                    ClientId = xWebhookRequest.ClientId
                 };
 
                 await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
@@ -214,12 +225,13 @@ namespace PosHubApi.Controllers
             {
                 await _logsDA.InsertLogAsync(new LogModel
                 {
-                    Url = "",
+                    Url = "http://localhost:5091/api/WebhookEvent/orderWebhookEvent_",
                     Event = "OrderWebhookEvent",
                     IsSuccess = false,
                     FailMessage = ex.Message,
                     ApplicationId = xWebhookRequest.ClientId,
-                    RequestBody = body
+                    RequestBody = body,
+                    UniqueId = xWebhookRequest.EventId
                 });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
@@ -229,7 +241,8 @@ namespace PosHubApi.Controllers
                     InnerErrorMessage = ex.InnerException?.Message ?? "",
                     ApiCall = apiCall,
                     MethodName = nameof(OrderWebhookEvent),
-                    ErrorOccurredDateTime = DateTime.Now
+                    ErrorOccurredDateTime = DateTime.Now,
+                    ClientId = xWebhookRequest.ClientId
                 };
 
                 await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
@@ -243,12 +256,13 @@ namespace PosHubApi.Controllers
             {
                 await _logsDA.InsertLogAsync(new LogModel
                 {
-                    Url = "",
+                    Url = "http://localhost:5091/api/WebhookEvent/orderWebhookEvent_",
                     Event = "OrderWebhookEvent",
                     IsSuccess = false,
                     FailMessage = ex.Message,
                     ApplicationId = xWebhookRequest.ClientId,
-                    RequestBody = body
+                    RequestBody = body,
+                    UniqueId = xWebhookRequest.EventId
                 });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
@@ -258,7 +272,8 @@ namespace PosHubApi.Controllers
                     InnerErrorMessage = ex.InnerException?.Message ?? "",
                     ApiCall = apiCall,
                     MethodName = nameof(OrderWebhookEvent),
-                    ErrorOccurredDateTime = DateTime.Now
+                    ErrorOccurredDateTime = DateTime.Now,
+                    ClientId = xWebhookRequest.ClientId
                 };
 
                 await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);

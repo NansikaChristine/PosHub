@@ -23,20 +23,21 @@ namespace PosHubApi.Controllers
             _apiErrorDA = apiErrorDA;
         }
 
-        [HttpPut("updateOrderEventByOrderId")]
-        public async Task<IActionResult> UpdateOrderEventByOrderId([FromBody] UpdateOrderEventRequestDto dto)
+        [HttpPut("updateOrderEventByOrderId/{applicationId}")]
+        public async Task<IActionResult> UpdateOrderEventByOrderId([FromBody] UpdateOrderEventRequestUIDto dto, string applicationId)
         {
             if (string.IsNullOrWhiteSpace(dto.OrderId))
                 return BadRequest("OrderId is required.");
             string apiCall = $"OrderEvent/updateOrderEventByOrderId";
+            
+            bool IsSuccess = await _orderEventRepository.UpdateOrderEventByOrderIdAsync(dto.OrderId, dto.Status, dto.CancellationReason, apiCall);
+            
             try
             {
-                OrderEventDto orderEvent = await _orderEventRepository.UpdateOrderEventByOrderIdAsync(dto.OrderId, dto.Status, dto.CancellationReason, apiCall);
-
-                if (orderEvent == null || string.IsNullOrWhiteSpace(orderEvent.Id))
+                if (!IsSuccess)
                     return NotFound(new { Message = $"No order event found for OrderId: {dto.OrderId}" });
 
-                return Ok(orderEvent);
+                return Ok();
             }
             catch (Exception ex)
             {
@@ -48,7 +49,8 @@ namespace PosHubApi.Controllers
                     InnerErrorMessage = ex.InnerException?.Message ?? "",
                     ApiCall = apiCall,
                     MethodName = nameof(UpdateOrderEventByOrderId),
-                    ErrorOccurredDateTime = DateTime.Now
+                    ErrorOccurredDateTime = DateTime.Now,
+                    ClientId = applicationId
                 };
 
                 await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);

@@ -4,7 +4,7 @@ using PosHubApi.Data.Repositories;
 using PosHubApi.Mapper;
 using PosHubApi.Middleware;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -26,7 +26,7 @@ builder.Services.AddScoped<LogsDA>();
 builder.Services.AddHttpClient<IOrderEventRepository,OrderEventRepository>();
 
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 app.UseMiddleware<ExceptionMiddleware>();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

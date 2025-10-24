@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using PosHubApi.Data.Interfaces;
@@ -23,9 +24,10 @@ namespace PosHubApi.Controllers
         public async Task<ActionResult<CatalogImportEntityDto>> PullCatalog()
         {
             string apiCall = $"Catalog/pull";
-            CatalogImportEntityDto catalog = await _catalogRrepository.GetPullCatalogAsync(apiCall);
+            (CatalogImportEntityDto, bool) catalog = await _catalogRrepository.GetPullCatalogAsync(apiCall);
 
-            return Ok(catalog);
+            if (!catalog.Item2) return BadRequest("Failed to pull catalog to PosHub.");
+            else return Ok(catalog.Item1);
         }
 
         [HttpPost("syncCatalogToPosHub/{applicationId}")]
@@ -100,41 +102,83 @@ namespace PosHubApi.Controllers
             }
         }
 
-        // [HttpPost("createCatalogProduct/{applicationId}")]
-        // public async Task<ActionResult<ProductDto>> CreateCatalogProductByProductId(string applicationId, ProductDto product)
-        // {
-        //     try
-        //     {
-        //         string apiCall = $"Catalog/createCatalogProduct";
-        //         ClientsDto clientDetail = await _authRepository.GetClientDetailsByClientIdAsync(applicationId, apiCall);
+        [HttpDelete("deleteCatalogProductByPosRefId/{applicationId}/{posRefId}")]
+        public async Task<ActionResult<bool>> DeleteCatalogProductByPosRefId(string applicationId, string posRefId)
+        {
+            Console.WriteLine(posRefId);
+            try
+            {
+                string apiCall = $"Catalog/deleteCatalogProductByPosRefId/{applicationId}/{posRefId}";
+                bool response = await _catalogRrepository.DeleteCatalogProductByPosRefId(applicationId, posRefId, apiCall);
 
-        //         ProductDto productRes = await _catalogRrepository.CreateCatalogProductByProductId(clientDetail, product, apiCall);
-        //         return Ok(productRes);
-        //     }
-        //     catch (Exception ex)
-        //     {
-        //         return BadRequest(new { error = ex.Message });
-        //     }
-        // }
+                if (response)
+                {
+                    return NoContent();
+                }
+                else
+                {
+                    return NotFound(new { error = "PosHubProductId not found or already deleted." }); // HTTP 404
+                }
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { error = ex.Message }); // HTTP 401
+            }
+            catch (SecurityException ex)
+            {
+                return Forbid(); // HTTP 403
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message }); // HTTP 500
+            }
+        }
 
-        // [HttpDelete("deleteCatalogProductByProductId/{applicationId}/{productId}")]
-        // public async Task<ActionResult> DeleteCatalogProductByProductId(string applicationId, string productId)
-        // {
-        //     try
-        //     {
-        //         string apiCall = $"Catalog/deleteCatalogProductByProductId";
-        //         ClientsDto clientDetail = await _authRepository.GetClientDetailsByClientIdAsync(applicationId, apiCall);
+        [HttpDelete("deleteCatalogCategoryByPosRefId/{applicationId}/{posRefId}")]
+        public async Task<ActionResult<bool>> DeleteCatalogCategoryByPosRefId(string applicationId, string posRefId)
+        {
+            try
+            {
+                string apiCall = $"Catalog/deleteCatalogCategoryByPosRefId/{applicationId}/{posRefId}";
+                bool response = await _catalogRrepository.DeleteCatalogCategoryByPosRefId(applicationId, posRefId, apiCall);
 
-        //         bool response = await _catalogRrepository.DeleteCatalogProductByProductId(clientDetail, productId, apiCall);
-        //         if (!response)
-        //             return BadRequest("Failed to delete catalog product to PosHub.");
-        //         return Ok(response);
-        //     }
-        //     catch (Exception ex)
-        //     {
-        //         return BadRequest(new { error = ex.Message });
-        //     }
-        // }
+                if (response)
+                {
+                    return NoContent();
+                }
+                else
+                {
+                    return NotFound(new { error = "PosHubCategoryId not found or already deleted." }); // HTTP 404
+                }
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { error = ex.Message }); // HTTP 401
+            }
+            catch (SecurityException ex)
+            {
+                return Forbid(); // HTTP 403
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message }); // HTTP 500
+            }
+        }
+
+        [HttpPatch("updateProductByPosRefId/{applicationId}")]
+        public async Task<ActionResult> UpdateProductByPosRefId(ProductDto product,string applicationId)
+        {
+            try
+            {
+                string apiCall = $"Catalog/updateProductByPosRefId/{applicationId}";
+                bool isUpdate = await _catalogRrepository.UpdateProductByPosRefId(applicationId, product, apiCall);
+                return Ok(true);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
     
     }
 }
