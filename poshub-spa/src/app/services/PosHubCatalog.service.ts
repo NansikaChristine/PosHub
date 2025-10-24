@@ -4,7 +4,8 @@ import { HttpClient } from "@angular/common/http";
 import { Observable } from "rxjs";
 import { ClientsDto } from "../dtos/clientsDto";
 import { CatalogProductsResponseDto } from "../dtos/catalogProductsResponseDto";
-import { UpdateOrderEventRequestDto } from "../dtos/updateOrderEventRequestDto";
+import { UpdateOrderEventRequestUIDto } from "../dtos/updateOrderEventRequestUIDto";
+import { ProductDto } from "../dtos/productDto";
 
 /**
  * @description
@@ -16,10 +17,10 @@ import { UpdateOrderEventRequestDto } from "../dtos/updateOrderEventRequestDto";
 export class PosHubCatalogService {
   public clientDetails: ClientsDto[] = [];
   client?: ClientsDto;
-  
-  constructor(private http: HttpClient) {}
 
-  public SyncCatalogToPosHub(applicationId: string): Observable<boolean>  {
+  constructor(private http: HttpClient) { }
+
+  public SyncCatalogToPosHub(applicationId: string): Observable<boolean> {
     const url = environment.apiUrl + 'Catalog/syncCatalogToPosHub/' + applicationId;
     return this.http.post<boolean>(url, {});
   }
@@ -29,9 +30,9 @@ export class PosHubCatalogService {
     return this.http.get<CatalogProductsResponseDto>(url, {});
   }
 
-  public getClientsDetails(){
+  public getClientsDetails() {
     const url = environment.apiUrl + 'PosHubAuthApi/apps';
-    return this.http.get<any>(url, {}); 
+    return this.http.get<any>(url, {});
   }
 
   public getCatalogProductsByPosRefId(applicationId: string, posRefId: string): Observable<any> {
@@ -39,8 +40,24 @@ export class PosHubCatalogService {
     return this.http.get<any>(url);
   }
 
-  public updateOrderEventByOrderId(dto:UpdateOrderEventRequestDto): Observable<any> {
-    const url = environment.apiUrl + 'OrderEvent/updateOrderEventByOrderId';
-    return this.http.put<any>(url,dto);
+  public deleteCatalogProductsByPosRefId(applicationId: string, posRefId: string): Observable<any> {
+    const url = environment.apiUrl + 'Catalog/deleteCatalogProductByPosRefId/' + applicationId + '/' + posRefId;
+    return this.http.delete<any>(url);
+  }
+  public deleteCatalogCategoryByPosRefId(applicationId: string, posRefId: string): Observable<any> {
+    const url = environment.apiUrl + 'Catalog/deleteCatalogCategoryByPosRefId/' + applicationId + '/' + posRefId;
+    return this.http.delete<any>(url);
+  }
+  public updateOrderEventByOrderId(dto: UpdateOrderEventRequestUIDto, applicationId: string): Observable<any> {
+    const url = environment.apiUrl + 'OrderEvent/updateOrderEventByOrderId/' + applicationId;
+    return this.http.put<any>(url, dto);
+  }
+  public updateProductByPosRefId(dto: ProductDto, applicationId: string): Observable<any> {
+    const url = environment.apiUrl + 'Catalog/updateProductByPosRefId/' + applicationId;
+    return this.http.patch<any>(url, dto);
+  }
+  public deleteAuthorize(applicationId: string): Observable<any> {
+    const url = environment.apiUrl + 'PosHubAuthApi/deleteAuthorize/' + applicationId;
+    return this.http.put<any>(url, {});
   }
 }

@@ -1,0 +1,19 @@
+<div *ngIf="currentClient.authorized" class="mt-3 flex gap-2 align-items-center">
+  <input type="text" name="Order Id" [(ngModel)]="orderInputs[currentClient.applicationId].orderId" autocomplete="off"
+    placeholder="Enter Order Id" class="form-control" style="display:inline-block; width: 200px; margin-right: 10px;" />
+
+  <select [(ngModel)]="orderInputs[currentClient.applicationId].status" (change)="onStatusChange(currentClient.applicationId)"
+    class="form-select" style="display:inline-block; width: 200px; margin-right: 10px;">
+    <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
+  </select>
+
+  <input *ngIf="orderInputs[currentClient.applicationId].status === 'CANCELLED'" type="text"
+    [(ngModel)]="orderInputs[currentClient.applicationId].reason" placeholder="Enter cancellation reason" class="form-control"
+    style="width: 220px;" />
+
+  <button class="btn btn-success" (click)="updateOrderEvent(currentClient.applicationId)"
+    [disabled]="!orderInputs[currentClient.applicationId].orderId || (orderInputs[currentClient.applicationId].status === 'CANCELLED' && !orderInputs[currentClient.applicationId].reason)">
+    Update Order
+  </button>
+
+</div>
