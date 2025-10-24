@@ -1,0 +1,50 @@
+<div class="container py-5">
+  <h2 class="mb-4 fw-semibold">Catalog Management - {{this.currentClient.clientName}}</h2>
+
+  <div class="row g-4">
+    <!-- Orders -->
+    <div class="col-md-6 col-lg-4">
+      <div class="card card1 shadow-lg border-0 text-center py-5" (click)="viewOrder()">
+        <div class="card-body">
+          <h3 class="card-title fw-bold mb-0">Orders</h3>
+        </div>
+      </div>
+    </div>
+
+    <!-- Items -->
+    <div class="col-md-6 col-lg-4">
+      <div class="card card2 shadow-lg border-0 text-center py-5" (click)="viewItem()">
+        <div class="card-body">
+          <h3 class="card-title fw-bold mb-0">Items</h3>
+        </div>
+      </div>
+    </div>
+
+    <!-- Categories -->
+    <div class="col-md-6 col-lg-4">
+      <div class="card card3 shadow-lg border-0 text-center py-5" (click)="viewCategory()">
+        <div class="card-body">
+          <h3 class="card-title fw-bold mb-0">Categories</h3>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modifier Groups -->
+    <div class="col-md-6 col-lg-4">
+      <div class="card card4 shadow-lg border-0 text-center py-5">
+        <div class="card-body">
+          <h3 class="card-title fw-bold mb-0">Modifier Groups</h3>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modifiers -->
+    <div class="col-md-6 col-lg-4">
+      <div class="card card5 shadow-lg border-0 text-center py-5">
+        <div class="card-body">
+          <h3 class="card-title fw-bold mb-0">Modifiers</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
