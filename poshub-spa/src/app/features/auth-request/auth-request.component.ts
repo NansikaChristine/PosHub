@@ -1,14 +1,11 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { PosHubCatalogService } from '../../services/PosHubCatalog.service';
-import { TokenRequestDto } from '../../dtos/tokenRequestDto';
 import { TokenResponseDto } from '../../dtos/tokenResponseDto';
-import { AccountLocationDto } from '../../dtos/accountLocationDto';
 import { Router } from '@angular/router';
 import { CatalogImportEntityDto } from '../../dtos/catalogImportEntityDto';
 import { ClientsDto } from '../../dtos/clientsDto';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { UpdateOrderEventRequestDto } from '../../dtos/updateOrderEventRequestDto';
+import { HttpClient } from '@angular/common/http';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-auth-request',
@@ -24,61 +21,18 @@ export class AuthRequestComponent implements OnInit {
   searchTerm: string = '';
   filteredClientDetails: ClientsDto[] = [];
   authorized: boolean = false;
-  selectedProduct: any = null;
-  orderSearchTerm: string = '';
-  orderInputs: { [appId: string]: { orderId: string, status: string, reason: string } } = {};
-  statuses: string[] = ['ACCEPTED', 'COMPLETED', 'REJECTED', 'CANCELLED'];
 
 
   constructor(
     public service: PosHubCatalogService,
     private cdr: ChangeDetectorRef,
-    public http: HttpClient
+    public http: HttpClient,
+    public toasterService: ToastService,
+    private router: Router
   ) { }
 
   ngOnInit(): void {
     this.getClientDetails();
-  }
-  onStatusChange(appId: string): void {
-    const inputs = this.orderInputs[appId];
-    if (inputs.status !== 'CANCELLED') {
-      inputs.reason = '';
-    }
-  }
-
-  updateOrderEvent(appId: string): void {
-    const inputs = this.orderInputs[appId];
-
-    const dto = new UpdateOrderEventRequestDto();
-    dto.orderId = inputs.orderId;
-    dto.status = inputs.status;
-    dto.cancellationReason = inputs.reason;
-
-    this.service.updateOrderEventByOrderId(dto).subscribe({
-      next: (response) => {
-        alert('Order event updated successfully!');
-        
-        inputs.orderId = '';
-        inputs.status = 'ACCEPTED';
-        inputs.reason = '';
-
-        this.onStatusChange(appId);
-        this.cdr.detectChanges();
-        console.log(response);
-      },
-      error: (err) => {
-        if (err.status === 404) {
-          alert(err.error?.message || 'Order not found.');
-        } else if (err.status === 400) {
-          alert(err.error?.message || 'Bad request.');
-        } else if (err.status === 500) {
-          alert('Server error: ' + (err.error?.message || 'Unknown error occurred.'));
-        } else {
-          alert('Unexpected error: ' + JSON.stringify(err.error));
-        }
-        console.error(err);
-      }
-    });
   }
 
   public getClientDetails(): void {
@@ -86,14 +40,6 @@ export class AuthRequestComponent implements OnInit {
       next: (data: ClientsDto[]) => {
         this.service.clientDetails = data || [];
         this.filteredClientDetails = [...this.service.clientDetails];
-
-        this.filteredClientDetails.forEach(client => {
-          this.orderInputs[client.applicationId] = {
-            orderId: '',
-            status: 'ACCEPTED',
-            reason: ''
-          };
-        });
         this.cdr.detectChanges();
         console.log(this.filteredClientDetails);
       },
@@ -118,7 +64,6 @@ export class AuthRequestComponent implements OnInit {
     this.service.client = client;
     console.log(this.service.client);
 
-
     const scopes = encodeURIComponent("provisioning connections.write catalogs.read catalogs.write orders.read orders.write locations.read locations.write connections.read");
 
     const url = `https://api-sit-dr.stage.tryposhub.com/oauth2/authorize?` +
@@ -131,44 +76,33 @@ export class AuthRequestComponent implements OnInit {
     window.location.href = url;
   }
 
+
   public syncCatalogToPosHub(applicationId: string): void {
     console.log(applicationId);
     this.service.SyncCatalogToPosHub(applicationId).subscribe({
       next: (res) => {
-        console.log('Catalog synced successfully:', res);
+        this.toasterService.success('Catalog synced successfully:');
       },
       error: (err) => {
-        console.error('Error syncing catalog:', err);
+        this.toasterService.error('Error syncing catalog:', err);
       }
     });
   }
 
-  public getCatalogProducts(applicationId: string, limit: string): void {
-    console.log(applicationId);
-    this.service.GetCatalogProducts(applicationId, limit).subscribe({
-      next: (res) => {
-        console.log('Get Catalog products successfully:', res);
+  public view(client: ClientsDto): void {
+    localStorage.setItem('currentClient', JSON.stringify(client))
+    this.router.navigate(['/home']);
+  }
+
+  public deleteAuthorize(client: ClientsDto): void {
+    this.service.deleteAuthorize(client.applicationId).subscribe({
+      next: () => {
+        this.toasterService.success(`Successfully Unauthorized`);
+        location.reload();
       },
-      error: (err) => {
-        console.error('Error getting Catalog products:', err);
+      error: (error) => {
+        this.toasterService.error(error);
       }
     });
   }
-
-  getCatalogProductsByPosRefId(applicationId: string, posRefId: string) {
-    if (!posRefId) {
-      alert('Please enter a PosRefId');
-      return;
-    }
-
-    this.service.getCatalogProductsByPosRefId(applicationId, posRefId)
-      .subscribe(response => {
-        this.selectedProduct = response;
-        console.log(response);
-      }, error => {
-        console.error('Error fetching product', error);
-        this.selectedProduct = null;
-      });
-  }
-
 }
