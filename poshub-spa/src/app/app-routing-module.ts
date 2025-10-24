@@ -4,7 +4,8 @@ import { AuthRequestComponent } from './features/auth-request/auth-request.compo
 
 const routes: Routes = [
   { path: '', component: AuthRequestComponent },
-  { path: '**', redirectTo: '' }
+  { path: 'home', loadChildren: () => import('./features/home/home-module').then(m => m.HomeModule) },
+  { path: '**', redirectTo: '' },
 ];
 
 @NgModule({

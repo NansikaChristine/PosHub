@@ -6,6 +6,8 @@ import { App } from './app';
 import { HttpClientModule } from '@angular/common/http';
 import { AuthRequestComponent } from './features/auth-request/auth-request.component';
 import { FormsModule } from '@angular/forms';
+import { ToastrModule } from 'ngx-toastr';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 @NgModule({
   declarations: [
@@ -14,6 +16,15 @@ import { FormsModule } from '@angular/forms';
   ],
   imports: [
     BrowserModule,
+    BrowserAnimationsModule,
+    ToastrModule.forRoot({
+      positionClass: 'toast-top-right',
+      timeOut: 5000,
+      //closeButton: true,
+      progressBar: true,
+     // preventDuplicates: true,
+      //tapToDismiss: true,
+    }),
     AppRoutingModule,
     FormsModule,
     HttpClientModule
