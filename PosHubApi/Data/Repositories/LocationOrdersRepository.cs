@@ -51,14 +51,17 @@ namespace PosHubApi.Data.Repositories
                         IsSuccess = false,
                         FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}",
                         RequestBody = body,
-                        ApplicationId = applicationId
+                        ApplicationId = applicationId,
+                        UniqueId = orderId
+
                     });
                     await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
                     {
                         ErrorMessage = $"API call failed with status {response.StatusCode}. Body: {body}",
                         ApiCall = apiCall,
                         MethodName = nameof(GetOrderByOrderId),
-                        ErrorOccurredDateTime = DateTime.Now
+                        ErrorOccurredDateTime = DateTime.Now,
+                        ClientId = applicationId
                     });
                     return new OrderEventDto();
                 }
@@ -75,7 +78,8 @@ namespace PosHubApi.Data.Repositories
                     IsSuccess = true,
                     FailMessage = "",
                     RequestBody = "",
-                    ApplicationId = applicationId
+                    ApplicationId = applicationId,
+                    UniqueId = orderId
                 });
                 return orderResponse.Data ?? new OrderEventDto();
             }
@@ -88,7 +92,8 @@ namespace PosHubApi.Data.Repositories
                     IsSuccess = false,
                     FailMessage = ex.Message,
                     RequestBody = "",
-                    ApplicationId = applicationId
+                    ApplicationId = applicationId,
+                    UniqueId = orderId
                 });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
@@ -98,7 +103,8 @@ namespace PosHubApi.Data.Repositories
                     InnerErrorMessage = ex.InnerException?.Message ?? "",
                     ApiCall = apiCall,
                     MethodName = nameof(GetOrderByOrderId),
-                    ErrorOccurredDateTime = DateTime.Now
+                    ErrorOccurredDateTime = DateTime.Now,
+                    ClientId = applicationId
                 };
 
                 await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);

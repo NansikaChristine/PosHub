@@ -112,7 +112,8 @@ namespace PosHubApi.Data.Repositories
                     InnerErrorMessage = ex.InnerException?.Message ?? "",
                     ApiCall = apiCall,
                     MethodName = nameof(GetAccessTokenAsync),
-                    ErrorOccurredDateTime = DateTime.Now
+                    ErrorOccurredDateTime = DateTime.Now,
+                    ClientId = requestDto.Client_Id
                 };
 
                 await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
@@ -205,7 +206,8 @@ namespace PosHubApi.Data.Repositories
                     InnerErrorMessage = ex.InnerException?.Message ?? "",
                     ApiCall = apiCall,
                     MethodName = nameof(RefreshAccessTokenAsync),
-                    ErrorOccurredDateTime = DateTime.Now
+                    ErrorOccurredDateTime = DateTime.Now,
+                    ClientId = request.Client_Id
                 };
 
                 await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
@@ -224,6 +226,11 @@ namespace PosHubApi.Data.Repositories
         public async Task<ClientsDto> GetClientDetailsByClientIdAsync(string applicationId, string apiCall)
         {
             return await _posHubAuthDA.GetClientDetailsByClientIdAsync(applicationId, apiCall);
+        }
+
+        public async Task<bool> DeleteAuthorize(string applicationId, string apiCall)
+        {
+            return await _posHubAuthDA.DeleteAuthorize(applicationId, apiCall);
         }
     }
 }

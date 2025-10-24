@@ -9,5 +9,7 @@ namespace PosHubApi.Data.Interfaces
         Task<bool> SaveOrUpdateAccountLocationAsync(AccountLocationDto dto, string apiCall);
         Task<List<ClientsDto>> GetClientsDetails(string apiCall);
         Task<ClientsDto> GetClientDetailsByClientIdAsync(string applicationId, string apiCall);
+        Task<bool> DeleteAuthorize(string applicationId, string apiCall);
+
     }
 }

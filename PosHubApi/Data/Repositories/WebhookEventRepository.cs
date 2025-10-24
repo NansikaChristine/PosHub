@@ -37,7 +37,7 @@ namespace PosHubApi.Data.Repositories
         {
             Console.WriteLine("xWebhookSignature__");
             Console.WriteLine(xWebhookSignature);
-            using var doc = JsonDocument.Parse(body);
+            using JsonDocument doc = JsonDocument.Parse(body);
             string clientId = doc.RootElement.GetProperty("clientId").GetString();
 
             Console.WriteLine("Body");
@@ -60,11 +60,11 @@ namespace PosHubApi.Data.Repositories
             Console.WriteLine("ClientSecret");
             Console.WriteLine(client.ClientSecret);
 
-            var keyBytes = Encoding.UTF8.GetBytes(client.ClientSecret);
-            var bodyBytes = Encoding.UTF8.GetBytes(body);
+            byte[] keyBytes = Encoding.UTF8.GetBytes(client.ClientSecret);
+            byte[] bodyBytes = Encoding.UTF8.GetBytes(body);
 
-            using var hmac = new HMACSHA1(keyBytes);
-            var hashBytes = hmac.ComputeHash(bodyBytes);
+            using HMACSHA1 hmac = new HMACSHA1(keyBytes);
+            byte[] hashBytes = hmac.ComputeHash(bodyBytes);
 
             Console.WriteLine("hmac");
             Console.WriteLine(hmac);
@@ -84,18 +84,19 @@ namespace PosHubApi.Data.Repositories
 
             isValid = computedSignature == xWebhookSignature;
 
-            if (!isValid)
-            {
-                ApiErrorMessageModel error = new ApiErrorMessageModel
-                {
-                    ErrorMessage = "Invalid webhook signature.",
-                    ApiCall = apiCall,
-                    MethodName = nameof(OrderWebhookEvent),
-                    ErrorOccurredDateTime = DateTime.Now
-                };
-                await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
+            // if (!isValid)
+            // {
+            //     ApiErrorMessageModel error = new ApiErrorMessageModel
+            //     {
+            //         ErrorMessage = "Invalid webhook signature.",
+            //         ApiCall = apiCall,
+            //         MethodName = nameof(OrderWebhookEvent),
+            //         ErrorOccurredDateTime = DateTime.Now,
+            //         ClientId = client.ClientId,
+            //     };
+            //     await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
 
-            }
+            // }
             
             // return isValid;
             return true;

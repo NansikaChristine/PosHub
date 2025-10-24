@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using AutoMapper;
 using PosHubApi.Data.DataAccess;
@@ -39,33 +40,68 @@ namespace PosHubApi.Data.Repositories
             _logsDA = logsDA;
         }
 
-        public async Task<OrderEventDto> UpdateOrderEventByOrderIdAsync(string orderId, string status, string cancellationReason, string apiCall)
+        public async Task<bool> UpdateOrderEventByOrderIdAsync(string orderId, string status, string cancellationReason, string apiCall)
         {
             OrderWebhookEventResponseDto existingDto = await _orderEventDA.GetOrderEventFromNewStateAsync(orderId, apiCall);
             if (existingDto == null || string.IsNullOrWhiteSpace(existingDto.NewState?.Id))
-                return null;
-            
+                return false;
+
             ClientsDto client = await _posHubAuthDA.GetClientDetailsByClientIdAsync(existingDto.ApplicationId, apiCall);
 
-            existingDto.NewState.Status = status;
-            existingDto.NewState.CancellationReason = cancellationReason;
+            UpdateOrderEventRequestDto dto = new UpdateOrderEventRequestDto
+            {
+                Notes = existingDto.NewState.Notes,
+                OrderNumber = existingDto.NewState.OrderNumber,
+                SourceDeviceType = "POS",
+                Timezone = existingDto.NewState.Timezone,
+                EstimatedDeliveryTime = existingDto.NewState.EstimatedDeliveryTime,
+                Payments = existingDto.NewState.Payments ?? new List<PaymentDto>(),
+                SubTotal = existingDto.NewState.SubTotal,
+                DriverStatus = "ASSIGNED",
+                FulfillmentType = existingDto.NewState.FulfillmentType,
+                TableName = existingDto.NewState.TableName,
+                TotalTax = existingDto.NewState.TotalTax,
+                Total = existingDto.NewState.Total,
+                Discounts = existingDto.NewState.Discounts ?? new List<DiscountDto>(),
+                Currency = existingDto.NewState.Currency,
+                EstimatedPickupTime = existingDto.NewState.EstimatedPickupTime,
+                Delivery = existingDto.NewState.Delivery,
+                CancellationReason = IsValidCancellationReason(cancellationReason) ? cancellationReason : null,
+                Tax = existingDto.NewState.Tax ?? new List<TaxDto>(),
+                FriendlyId = string.IsNullOrWhiteSpace(existingDto.NewState.FriendlyId) ? string.Empty : existingDto.NewState.FriendlyId,
+                PlacedOn = existingDto.NewState.PlacedOn,
+                IsPaid = existingDto.NewState.IsPaid,
+                Charges = existingDto.NewState.Charges ?? new List<ChargeDto>(),
+                Driver = existingDto.NewState.Driver,
+                IsScheduledOrder = existingDto.NewState.IsScheduledOrder,
+                TableId = existingDto.NewState.TableId,
+                PartnerId = existingDto.NewState.PartnerId,
+                SourceName = existingDto.NewState.SourceName,
+                Items = existingDto.NewState.Items ?? new List<ItemDto>(),
+                Customer = existingDto.NewState.Customer,
+                Status = status
+            };
 
-            string jsonContent = JsonSerializer.Serialize(existingDto, new JsonSerializerOptions
+            string jsonContent = JsonSerializer.Serialize(dto, new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                WriteIndented = false
+                WriteIndented = false,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
-            string url = $"http://localhost:5091/api/OrderEvent/UpdateOrderEvent/{orderId}";
-            StringContent content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-            HttpResponseMessage response = await _httpClient.PutAsync(url, content);
-            
-            // string url = $"{_baseUrl}/v1/accounts/{existingDto.AccountId}/locations/{existingDto.LocationId}/orders/{orderId}";
-            // var request = new HttpRequestMessage(new HttpMethod("PATCH"), url)
-            // {
-            //     Content = new StringContent(jsonContent, Encoding.UTF8, "application/json")
-            // };
-            // request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "");
-            // HttpResponseMessage response = await _httpClient.SendAsync(request);
+            // string url = $"http://localhost:5091/api/OrderEvent/UpdateOrderEvent/{orderId}";
+            // StringContent content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+            // HttpResponseMessage response = await _httpClient.PutAsync(url, content);
+
+            string url = $"{_baseUrl}/v1/accounts/{existingDto.AccountId}/locations/{existingDto.LocationId}/orders/{orderId}";
+            Console.WriteLine(url);
+            HttpRequestMessage request = new HttpRequestMessage(new HttpMethod("PATCH"), url)
+            {
+                Content = new StringContent(jsonContent, Encoding.UTF8, "application/json")
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
+            HttpResponseMessage response = await _httpClient.SendAsync(request);
+
+            Console.WriteLine(jsonContent);
 
             if (response.IsSuccessStatusCode)
             {
@@ -85,15 +121,10 @@ namespace PosHubApi.Data.Repositories
                     FailMessage = "",
                     RequestBody = "",
                     ApplicationId = existingDto.ApplicationId,
-                });
-                Stream responseStream = await response.Content.ReadAsStreamAsync();
-
-                OrderEventDto updatedDto = await JsonSerializer.DeserializeAsync<OrderEventDto>(responseStream, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
+                    UniqueId = orderId
                 });
 
-                return updatedDto;
+                return true;
             }
             else if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
@@ -105,9 +136,10 @@ namespace PosHubApi.Data.Repositories
                     IsSuccess = false,
                     FailMessage = $"Unauthorized - {response.ReasonPhrase}. Response body: {errorContent}",
                     RequestBody = jsonContent,
-                    ApplicationId = existingDto.ApplicationId
+                    ApplicationId = existingDto.ApplicationId,
+                    UniqueId = orderId
                 });
-                return null;
+                return false;
             }
             else if (response.StatusCode == HttpStatusCode.NotFound)
             {
@@ -119,9 +151,10 @@ namespace PosHubApi.Data.Repositories
                     IsSuccess = false,
                     FailMessage = $"NotFound - {response.ReasonPhrase}. Response body: {errorContent}",
                     RequestBody = jsonContent,
-                    ApplicationId = existingDto.ApplicationId
+                    ApplicationId = existingDto.ApplicationId,
+                    UniqueId = orderId
                 });
-                return null;
+                return false;
             }
             else
             {
@@ -133,7 +166,8 @@ namespace PosHubApi.Data.Repositories
                     IsSuccess = false,
                     FailMessage = $"Failed to update order event. Status: {response.StatusCode}, Error: {error}",
                     RequestBody = jsonContent,
-                    ApplicationId = existingDto.ApplicationId
+                    ApplicationId = existingDto.ApplicationId,
+                    UniqueId = orderId
                 });
 
                 throw new Exception($"Failed to update order event. Status: {response.StatusCode}, Error: {error}");
@@ -155,6 +189,22 @@ namespace PosHubApi.Data.Repositories
 
             return null;
         }
+
+        private bool IsValidCancellationReason(string reason)
+        {
+            if (string.IsNullOrWhiteSpace(reason)) return false;
+
+            string[] validReasons = new[] {
+                "OUT_OF_STOCK",
+                "STORE_CLOSED",
+                "TOO_BUSY",
+                "CUSTOMER_CANCELLED",
+                "OTHER"
+            };
+
+            return validReasons.Contains(reason.Trim().ToUpperInvariant());
+        }
+
 
     }
 }
