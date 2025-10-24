@@ -43,8 +43,14 @@ namespace PosHubApi.Dtos
         [JsonPropertyName("newState")]
         public OrderEventDto NewState { get; set; }
 
+        [JsonPropertyName("new_state")]
+        public OrderEventDto New_State { get; set; }
+
 
         [JsonPropertyName("previousState")]
         public OrderEventDto PreviousState { get; set; }
+
+        [JsonPropertyName("previous_state")]
+        public OrderEventDto Previous_State { get; set; }
     }
 }

@@ -13,6 +13,7 @@ namespace PosHubApi.Models
         public string InnerErrorMessage { get; set; } = string.Empty;
         public string ApiCall { get; set; } = string.Empty;
         public string MethodName { get; set; } = string.Empty;
+        public string ClientId { get; set; } = string.Empty;
         public DateTime ErrorOccurredDateTime { get; set; } 
     }
 }

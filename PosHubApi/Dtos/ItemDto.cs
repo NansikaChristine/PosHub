@@ -5,33 +5,33 @@ namespace PosHubApi.Dtos
     public class ItemDto
     {
         [JsonPropertyName("quantity")]
-         int Quantity { get; set; }
+        public int Quantity { get; set; }
 
         [JsonPropertyName("price")]
-         int Price { get; set; }
+        public int Price { get; set; }
 
         [JsonPropertyName("name")]
-         string Name { get; set; }
+        public string Name { get; set; }
 
         [JsonPropertyName("posReference")]
-         string PosReference { get; set; }
+        public string PosReference { get; set; }
 
         [JsonPropertyName("partnerId")]
-         string PartnerId { get; set; }
+        public string PartnerId { get; set; }
 
         [JsonPropertyName("parentPosReference")]
-         string ParentPosReference { get; set; }
+        public string ParentPosReference { get; set; }
 
         [JsonPropertyName("menuCategoryId")]
-         string MenuCategoryId { get; set; }
+        public string MenuCategoryId { get; set; }
 
         [JsonPropertyName("taxRateIds")]
-         List<string> TaxRateIds { get; set; }
+        public List<string> TaxRateIds { get; set; }
 
         [JsonPropertyName("options")]
-         List<ItemOptionDto> Options { get; set; }
+        public List<ItemOptionDto> Options { get; set; }
 
         [JsonPropertyName("customerNotes")]
-         string CustomerNotes { get; set; }
+        public string CustomerNotes { get; set; }
     }
 }

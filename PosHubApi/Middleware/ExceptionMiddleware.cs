@@ -28,13 +28,13 @@ namespace PosHubApi.Middleware
                 context.Response.ContentType = "application/json";
                 context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
-                var Response = _env.IsDevelopment()
+                ApiExceptions Response = _env.IsDevelopment()
                     ? new ApiExceptions(context.Response.StatusCode, ex.Message, ex.StackTrace?.ToString())
                     : new ApiExceptions(context.Response.StatusCode, "Internal Server Error");
 
-                var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+                JsonSerializerOptions options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-                var json = JsonSerializer.Serialize(Response, options);
+                string json = JsonSerializer.Serialize(Response, options);
 
                 await context.Response.WriteAsync(json);
             }

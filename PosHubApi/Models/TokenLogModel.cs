@@ -16,7 +16,7 @@ namespace PosHubApi.Models
         public string RefreshToken { get; set; }
         public string TokenType { get; set; }
         public int ExpiresIn { get; set; }
-        public DateTime RequestedAt { get; set; }  // when request was made
-        public DateTime ExpiresAt { get; set; }    // when token will expire
+        public DateTime RequestedAt { get; set; }
+        public DateTime ExpiresAt { get; set; }
     }
 }

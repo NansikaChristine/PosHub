@@ -10,8 +10,8 @@ namespace PosHubApi.Dtos
         public string Description { get; set; }
         public string PosVersion { get; set; }
         public string OriginalImageUrl { get; set; }
-        public int Price { get; set; }
-        public int? InStorePrice { get; set; }
+        public decimal Price { get; set; }
+        public decimal? InStorePrice { get; set; }
         public decimal TaxRate { get; set; }
         public bool IsTaxIncluded { get; set; } = true;
         public bool ContainsAlcohol { get; set; }

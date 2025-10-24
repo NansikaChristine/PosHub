@@ -13,6 +13,8 @@ namespace PosHubApi.Models
         public string FailMessage { get; set; }
         public string RequestBody { get; set; }
         public string ApplicationId { get; set; }
+        public string UniqueId { get; set; }
+        public int Count { get; set; }
     }
 
 }
