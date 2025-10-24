@@ -1,0 +1,102 @@
+
+@media screen and (max-width: 700px) {
+    .desc-width{
+        max-width: 100px !important;
+        overflow: hidden !important;
+    }
+    .mobile{
+        font-size: 12px !important;
+    }
+    .btns{
+        width: 222px !important;
+        font-size: 12px !important;
+    }
+    .create{
+        width: 252px !important;
+    }
+    .period{
+        font-size: 13px !important;
+    }
+}
+.btn:focus, .btn:active , select:focus , input:focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+td,th{
+    border:none;
+}
+.border_{
+    border-right: none !important;
+    padding-left: 5px;
+}
+
+/* Toggle Switch Styling */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #28a745; /* green when ON */
+}
+
+input:checked + .slider:before {
+  transform: translateX(22px);
+}
+
+/* Table header & overall style */
+table {
+  border-collapse: separate;
+  border-spacing: 0 6px;
+}
+
+thead {
+  border-radius: 8px;
+}
+
+th {
+  font-weight: 600;
+}
+
+tbody tr {
+  background-color: #ffffff;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
