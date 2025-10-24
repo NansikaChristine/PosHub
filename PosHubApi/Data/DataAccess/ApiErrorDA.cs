@@ -25,7 +25,7 @@ namespace PosHubApi.Data.DataAccess
                         SELECT TOP 1 Id, Count
                         FROM ApiErrorLogs with (nolock)
                         WHERE ErrorMessage = @ErrorMessage AND ErrorSource = @ErrorSource 
-                        AND StackTrace = @StackTrace AND MethodName = @MethodName";
+                        AND StackTrace = @StackTrace AND MethodName = @MethodName AND ClientId = @ClientId ";
 
                 using (SqlCommand checkCmd = new SqlCommand(checkQuery, conn))
                 {
@@ -33,6 +33,7 @@ namespace PosHubApi.Data.DataAccess
                     checkCmd.Parameters.Add(new SqlParameter("@ErrorSource", SqlDbType.NVarChar) { Value = (object)error.ErrorSource ?? DBNull.Value });
                     checkCmd.Parameters.Add(new SqlParameter("@StackTrace", SqlDbType.NVarChar) { Value = (object)error.StackTrace ?? DBNull.Value });
                     checkCmd.Parameters.Add(new SqlParameter("@MethodName", SqlDbType.NVarChar) { Value = (object)error.MethodName ?? DBNull.Value });
+                    checkCmd.Parameters.Add(new SqlParameter("@ClientId", SqlDbType.NVarChar) { Value = (object)error.ClientId ?? DBNull.Value });
 
                     long existingId = 0;
                     int existingCount = 0;
@@ -67,9 +68,9 @@ namespace PosHubApi.Data.DataAccess
                     {
                         string insertQuery = @"
                                 INSERT INTO ApiErrorLogs
-                                (Count, ErrorMessage, ErrorSource, StackTrace, InnerErrorMessage, ApiCall, MethodName, ErrorOccurredDateTime)
+                                (Count, ErrorMessage, ErrorSource, StackTrace, InnerErrorMessage, ApiCall, MethodName, ErrorOccurredDateTime, ClientId)
                                 VALUES
-                                (@Count, @ErrorMessage, @ErrorSource, @StackTrace, @InnerErrorMessage, @ApiCall, @MethodName, @ErrorOccurredDateTime)";
+                                (@Count, @ErrorMessage, @ErrorSource, @StackTrace, @InnerErrorMessage, @ApiCall, @MethodName, @ErrorOccurredDateTime, @ClientId)";
 
                         using (SqlCommand insertCmd = new SqlCommand(insertQuery, conn))
                         {
@@ -81,6 +82,7 @@ namespace PosHubApi.Data.DataAccess
                             insertCmd.Parameters.Add(new SqlParameter("@ApiCall", SqlDbType.NVarChar, 255) { Value = (object)error.ApiCall ?? DBNull.Value });
                             insertCmd.Parameters.Add(new SqlParameter("@MethodName", SqlDbType.NVarChar, 255) { Value = (object)error.MethodName ?? DBNull.Value });
                             insertCmd.Parameters.Add(new SqlParameter("@ErrorOccurredDateTime", SqlDbType.DateTime) { Value = DateTime.Now });
+                            insertCmd.Parameters.Add(new SqlParameter("@ClientId", SqlDbType.NVarChar) { Value = (object)error.ClientId ?? DBNull.Value });
 
                             await insertCmd.ExecuteNonQueryAsync();
                         }
@@ -91,7 +93,7 @@ namespace PosHubApi.Data.DataAccess
         #endregion InsertOrUpdateApiError
 
         #region GetApiErrors
-        public async Task<List<ApiErrorMessageModel>> GetApiErrorReportDAAsync(DateTime startDate, DateTime endDate,string apiCall)
+        public async Task<List<ApiErrorMessageModel>> GetApiErrorReportDAAsync(DateTime startDate, DateTime endDate,string apiCall, string clientId)
         {
             try
             {
@@ -100,7 +102,7 @@ namespace PosHubApi.Data.DataAccess
 
                 string sql = @"
                     SELECT [Id], [Count], [ErrorMessage], [ErrorSource], [StackTrace], 
-                        [InnerErrorMessage], [ApiCall], [MethodName], [ErrorOccurredDateTime]
+                        [InnerErrorMessage], [ApiCall], [MethodName], [ErrorOccurredDateTime], [ClientId]
                     FROM [dbo].[ApiErrorLogs] WITH (NOLOCK)
                     WHERE [ErrorOccurredDateTime] >= @StartDate AND [ErrorOccurredDateTime] < @EndDate
                     ORDER BY [ErrorOccurredDateTime] DESC";
@@ -128,6 +130,7 @@ namespace PosHubApi.Data.DataAccess
                                 try { error.ApiCall = rdr.GetString(6); } catch { }
                                 try { error.MethodName = rdr.GetString(7); } catch { }
                                 try { error.ErrorOccurredDateTime = rdr.GetDateTime(8); } catch { }
+                                try { error.ClientId = rdr.GetString(9); } catch { }
 
                                 errors.Add(error);
                             }
@@ -139,7 +142,7 @@ namespace PosHubApi.Data.DataAccess
             }
             catch (Exception ex)
             {
-                var error = new ApiErrorMessageModel
+                ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
                     ErrorMessage = ex.Message,
                     ErrorSource = ex.Source,
@@ -147,7 +150,8 @@ namespace PosHubApi.Data.DataAccess
                     InnerErrorMessage = ex.InnerException?.Message ?? "",
                     ApiCall = apiCall,
                     MethodName = nameof(GetApiErrorReportDAAsync),
-                    ErrorOccurredDateTime = DateTime.Now
+                    ErrorOccurredDateTime = DateTime.Now,
+                    ClientId = clientId
                 };
 
                 await InsertOrUpdateApiErrorAsync(error);

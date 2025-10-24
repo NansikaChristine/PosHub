@@ -48,7 +48,7 @@ namespace PosHubApi.Data.DataAccess
                                 {
                                     try
                                     {
-                                        var orderEvent = JsonSerializer.Deserialize<OrderEventDto>(json, new JsonSerializerOptions
+                                        OrderEventDto orderEvent = JsonSerializer.Deserialize<OrderEventDto>(json, new JsonSerializerOptions
                                         {
                                             PropertyNameCaseInsensitive = true
                                         });
@@ -71,7 +71,8 @@ namespace PosHubApi.Data.DataAccess
                                             InnerErrorMessage = deserializationEx.InnerException?.Message ?? "",
                                             ApiCall = apiCall,
                                             MethodName = nameof(GetOrderEventFromNewStateAsync),
-                                            ErrorOccurredDateTime = DateTime.Now
+                                            ErrorOccurredDateTime = DateTime.Now,
+                                            ClientId = applicationId
                                         });
 
                                         throw;
@@ -189,11 +190,11 @@ namespace PosHubApi.Data.DataAccess
                                 {
                                     try
                                     {
-                                        var orderEventNewState = JsonSerializer.Deserialize<OrderEventDto>(jsonNewState, new JsonSerializerOptions
+                                        OrderEventDto orderEventNewState = JsonSerializer.Deserialize<OrderEventDto>(jsonNewState, new JsonSerializerOptions
                                         {
                                             PropertyNameCaseInsensitive = true
                                         });
-                                        var orderEventPreviousState = JsonSerializer.Deserialize<OrderEventDto>(jsonPreviousState, new JsonSerializerOptions
+                                        OrderEventDto orderEventPreviousState = JsonSerializer.Deserialize<OrderEventDto>(jsonPreviousState, new JsonSerializerOptions
                                         {
                                             PropertyNameCaseInsensitive = true
                                         });
@@ -223,7 +224,8 @@ namespace PosHubApi.Data.DataAccess
                                             InnerErrorMessage = deserializationEx.InnerException?.Message ?? "",
                                             ApiCall = apiCall,
                                             MethodName = nameof(GetOrderEventFromNewStateAsync),
-                                            ErrorOccurredDateTime = DateTime.Now
+                                            ErrorOccurredDateTime = DateTime.Now,
+                                            ClientId = clientId
                                         });
 
                                         throw;

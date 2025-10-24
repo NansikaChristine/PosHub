@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
@@ -17,59 +18,85 @@ namespace PosHubApi.Data.DataAccess
             _apiErrorDA = apiErrorDA;
         }
 
-        public async Task<bool> InsertLogAsync(LogModel log)
+        #region InsertOrUpdateApiError
+        public async Task InsertLogAsync(LogModel log)
         {
-            const string sql = @"
-                MERGE [dbo].[Logs] AS target
-                USING (SELECT @Event AS Event, @ApplicationId AS ApplicationId) AS source
-                ON target.Event = source.Event AND target.ApplicationId = source.ApplicationId
-                WHEN MATCHED THEN
-                    UPDATE SET 
-                        [Url] = @Url,
+            using (SqlConnection conn = new SqlConnection(_defaultConnectionString))
+            {
+                await conn.OpenAsync();
+
+                string checkQuery = @"
+                        SELECT TOP 1 Id, Count
+                        FROM Logs with (nolock)
+                        WHERE Url = @Url AND Event = @Event 
+                        AND ApplicationId = @ApplicationId AND UniqueId = @UniqueId AND FailMessage = @FailMessage ";
+
+                using (SqlCommand checkCmd = new SqlCommand(checkQuery, conn))
+                {
+                    checkCmd.Parameters.Add(new SqlParameter("@Url", SqlDbType.NVarChar) { Value = (object)log.Url ?? DBNull.Value });
+                    checkCmd.Parameters.Add(new SqlParameter("@Event", SqlDbType.NVarChar) { Value = (object)log.Event ?? DBNull.Value });
+                    checkCmd.Parameters.Add(new SqlParameter("@ApplicationId", SqlDbType.NVarChar) { Value = (object)log.ApplicationId ?? DBNull.Value });
+                    checkCmd.Parameters.Add(new SqlParameter("@UniqueId", SqlDbType.NVarChar) { Value = (object)log.UniqueId ?? DBNull.Value });
+                    checkCmd.Parameters.Add(new SqlParameter("@FailMessage", SqlDbType.NVarChar) { Value = (object)log.FailMessage ?? DBNull.Value });
+
+                    long existingId = 0;
+                    int existingCount = 0;
+
+                    using (SqlDataReader reader = await checkCmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            existingId = reader.GetInt64(0);
+                            existingCount = reader.GetInt32(1);
+                        }
+                    }
+
+                    if (existingId > 0)
+                    {
+                        string updateQuery = @"
+                        UPDATE Logs SET 
                         [IsSuccess] = @IsSuccess,
                         [Failmessage] = @Failmessage,
                         [RequestModel] = @RequestModel,
-                        [InsertedAt] = GetDate()
-                WHEN NOT MATCHED THEN
-                    INSERT ([Url], [Event], [IsSuccess], [Failmessage], [RequestModel], [ApplicationId])
-                    VALUES (@Url, @Event, @IsSuccess, @Failmessage, @RequestModel, @ApplicationId); ";
+                        [UpdatedAt] = @UpdatedAt,
+                        [Count] = @Count
+                        WHERE Id = @Id";
 
-            try
-            {
-                using (SqlConnection connection = new SqlConnection(_defaultConnectionString))
-                {
-                    await connection.OpenAsync();
+                        using (SqlCommand updateCmd = new SqlCommand(updateQuery, conn))
+                        {
+                            updateCmd.Parameters.AddWithValue("@Count", existingCount + 1 );
+                            updateCmd.Parameters.AddWithValue("@UpdatedAt", DateTime.Now );
+                            updateCmd.Parameters.Add(new SqlParameter("@Id", SqlDbType.BigInt) { Value = existingId });
+                            updateCmd.Parameters.Add(new SqlParameter("@RequestModel", SqlDbType.NVarChar) { Value = log.RequestBody });
+                            updateCmd.Parameters.Add(new SqlParameter("@FailMessage", SqlDbType.NVarChar) { Value = (object)log.FailMessage ?? DBNull.Value });
+                            updateCmd.Parameters.AddWithValue("@IsSuccess", log.IsSuccess);
 
-                    using (SqlCommand command = new SqlCommand(sql, connection))
+                            await updateCmd.ExecuteNonQueryAsync();
+                        }
+                    }
+                    else
                     {
-                        command.Parameters.AddWithValue("@Url", (object)log.Url ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@Event", (object)log.Event ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@IsSuccess", log.IsSuccess);
-                        command.Parameters.AddWithValue("@Failmessage", (object)log.FailMessage ?? DBNull.Value);
-                        command.Parameters.AddWithValue("@RequestModel", log.RequestBody);
-                        command.Parameters.AddWithValue("@ApplicationId", log.ApplicationId);
+                        string insertQuery = @"
+                        INSERT INTO Logs ([Url], [Event], [IsSuccess], [Failmessage], [RequestModel], [ApplicationId], [UniqueId], [Count])
+                        VALUES (@Url, @Event, @IsSuccess, @Failmessage, @RequestModel, @ApplicationId, @UniqueId, @Count); ";
 
-                        int affectedRows = await command.ExecuteNonQueryAsync();
-                        return affectedRows > 0;
+                        using (SqlCommand insertCmd = new SqlCommand(insertQuery, conn))
+                        {
+                            insertCmd.Parameters.AddWithValue("@Url", (object)log.Url ?? DBNull.Value);
+                            insertCmd.Parameters.AddWithValue("@Event", (object)log.Event ?? DBNull.Value);
+                            insertCmd.Parameters.AddWithValue("@IsSuccess", log.IsSuccess);
+                            insertCmd.Parameters.AddWithValue("@Failmessage", (object)log.FailMessage ?? DBNull.Value);
+                            insertCmd.Parameters.AddWithValue("@RequestModel", log.RequestBody);
+                            insertCmd.Parameters.AddWithValue("@ApplicationId", log.ApplicationId);
+                            insertCmd.Parameters.AddWithValue("@UniqueId", (object)log.UniqueId ?? DBNull.Value );
+                            insertCmd.Parameters.AddWithValue("@Count", 1 );
+
+                            await insertCmd.ExecuteNonQueryAsync();
+                        }
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
-                {
-                    ErrorMessage = ex.Message,
-                    ErrorSource = ex.Source,
-                    StackTrace = ex.StackTrace,
-                    InnerErrorMessage = ex.InnerException?.Message ?? "",
-                    ApiCall = "InsertLog",
-                    MethodName = nameof(InsertLogAsync),
-                    ErrorOccurredDateTime = DateTime.Now
-                });
-
-                throw;
-            }
         }
-
+        #endregion InsertOrUpdateApiError
     }
 }

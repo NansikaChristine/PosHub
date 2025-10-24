@@ -89,7 +89,9 @@ namespace PosHubApi     .Data.DataAccess
                     InnerErrorMessage = ex.InnerException?.Message ?? "",
                     ApiCall = apiCall,
                     MethodName = nameof(UpdateOrInsertTokenLog),
-                    ErrorOccurredDateTime = DateTime.Now
+                    ErrorOccurredDateTime = DateTime.Now,
+                    ClientId = tokenLog.ClientId
+
                 };
 
                 await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
@@ -154,7 +156,8 @@ namespace PosHubApi     .Data.DataAccess
                     InnerErrorMessage = ex.InnerException?.Message ?? "",
                     ApiCall = apiCall,
                     MethodName = nameof(UpdateOrInsertAccountLocation),
-                    ErrorOccurredDateTime = DateTime.Now
+                    ErrorOccurredDateTime = DateTime.Now,
+                    ClientId = dto.ApplicationId
                 };
 
                 await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
@@ -306,7 +309,8 @@ namespace PosHubApi     .Data.DataAccess
                     InnerErrorMessage = ex.InnerException?.Message ?? "",
                     ApiCall = apiCall,
                     MethodName = nameof(GetClientDetailsByClientIdAsync),
-                    ErrorOccurredDateTime = DateTime.Now
+                    ErrorOccurredDateTime = DateTime.Now,
+                    ClientId = applicationId
                 };
 
                 await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
@@ -315,5 +319,49 @@ namespace PosHubApi     .Data.DataAccess
         }
         
         #endregion  GetClientDetailsByClientIdAsync
+
+        #region DeleteAuthorize
+        public async Task<bool> DeleteAuthorize(string applicationId, string apiCall)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(_defaultConnectionString))
+                {
+                    await conn.OpenAsync();
+                    {
+                        string sql = @"
+                                UPDATE AccountLocation
+                                SET Authorized = 0 , UpdatedAt = GetDate()
+                                WHERE ApplicationId = @ApplicationId ;";
+
+                        using (SqlCommand cmd = new SqlCommand(sql, conn))
+                        {
+                            cmd.Parameters.AddWithValue("@ApplicationId", applicationId ?? (object)DBNull.Value);
+                            await cmd.ExecuteNonQueryAsync();
+                        }
+
+                    }
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = "DeleteAuthorize",
+                    MethodName = nameof(DeleteAuthorize),
+                    ErrorOccurredDateTime = DateTime.Now
+                });
+
+                return false;
+            }
+        }
+
+        #endregion DeleteAuthorize
+
     }
 }

@@ -24,8 +24,8 @@ namespace PosHubApi.Data.DataAccess
         //         CatalogImportEntityDto returnData = new CatalogImportEntityDto();
         //         List<CategoryDto> categories = new List<CategoryDto>();
         //         List<ModifierDto> modifiers = new List<ModifierDto>();
-        //         var modifierGroups = new List<ModifierGroupDto>();
-        //         var products = new List<ProductDto>();
+        // List<ModifierGroupDto> modifierGroups = new List<ModifierGroupDto>();
+        // List<ProductDto> products = new List<ProductDto>();
 
         //         string Sql = @"
         //             -- Categories + service availability
@@ -165,7 +165,7 @@ namespace PosHubApi.Data.DataAccess
         //                     {
         //                         while (await reader.ReadAsync())
         //                         {
-        //                             var modifier = new ModifierDto
+        // ModifierDto modifier = new ModifierDto
         //                             {
         //                                 PosReference = reader["PosReference"].ToString(),
         //                                 Name = reader["Name"].ToString(),
@@ -279,7 +279,7 @@ namespace PosHubApi.Data.DataAccess
         //                     {
         //                         while (await reader.ReadAsync())
         //                         {
-        //                             var product = new ProductDto
+        // ProductDto product = new ProductDto
         //                             {
         //                                 PosReference = reader["PosReference"].ToString(),
         //                                 Name = reader["Name"].ToString(),
@@ -330,12 +330,12 @@ namespace PosHubApi.Data.DataAccess
                 using (SqlConnection conn = new SqlConnection(_defaultConnectionString))
                 {
                     await conn.OpenAsync();
-                    foreach (var product in products)
+                    foreach (ProductDto product in products)
                     {
                         string sql = @"
                                 UPDATE Products
                                 SET PosHubProductId = @Id , UpdatedAt = GetDate()
-                                WHERE PosReference = @PosReference and PosHubProductId is NULL;";
+                                WHERE PosReference = @PosReference and (PosHubProductId is NULL or PosHubProductId='');";
 
                         using (SqlCommand cmd = new SqlCommand(sql, conn))
                         {
@@ -358,6 +358,290 @@ namespace PosHubApi.Data.DataAccess
                     ApiCall = apiCall,
                     MethodName = nameof(UpdatePosHubProductIdsAsync),
                     ErrorOccurredDateTime = DateTime.Now
+
+                };
+
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
+                return false;
+            }
+        }
+
+        public async Task<bool> UpdatePosHubCategoryIdsAsync(List<CategoryDto> categories, string apiCall)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(_defaultConnectionString))
+                {
+                    await conn.OpenAsync();
+                    foreach (CategoryDto category in categories)
+                    {
+                        string sql = @"
+                                UPDATE Categories
+                                SET PosHubCategoryId = @Id , UpdatedAt = GetDate()
+                                WHERE PosReference = @PosReference and (PosHubCategoryId is NULL or PosHubCategoryId='');";
+
+                        using (SqlCommand cmd = new SqlCommand(sql, conn))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", category.Id ?? (object)DBNull.Value);
+                            cmd.Parameters.AddWithValue("@PosReference", category.PosReference ?? (object)DBNull.Value);
+                            await cmd.ExecuteNonQueryAsync();
+                        }
+                    }
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ApiErrorMessageModel error = new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = apiCall,
+                    MethodName = nameof(UpdatePosHubProductIdsAsync),
+                    ErrorOccurredDateTime = DateTime.Now
+
+                };
+
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
+                return false;
+            }
+        }
+
+        #region GetPosHubProductIdByPosReferenceAsync
+        public async Task<string?> GetPosHubProductIdByPosReferenceAsync(string posReference)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(_defaultConnectionString))
+                {
+                    await conn.OpenAsync();
+
+                    string sql = @"
+                        SELECT PosHubProductId 
+                        FROM Products 
+                        WHERE PosReference = @PosReference;";
+
+                    using (SqlCommand cmd = new SqlCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@PosReference", posReference ?? (object)DBNull.Value);
+
+                        object result = await cmd.ExecuteScalarAsync();
+
+                        if (result != null && result != DBNull.Value)
+                        {
+                            return result.ToString();
+                        }
+
+                        return null;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ApiErrorMessageModel error = new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = "GetPosHubProductIdByPosReferenceAsync",
+                    MethodName = nameof(GetPosHubProductIdByPosReferenceAsync),
+                    ErrorOccurredDateTime = DateTime.Now
+                };
+
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
+                return null;
+            }
+        }
+        #endregion GetPosHubProductIdByPosReferenceAsync
+
+        #region DeleteProductAndRelationsByPosReferenceAsync
+        public async Task<bool> DeleteProductAndRelationsByPosReferenceAsync(string posReference)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(_defaultConnectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (SqlTransaction transaction = conn.BeginTransaction())
+                    {
+                        string sql = @"
+                            DELETE FROM ProductCategories WHERE ProductPosRef = @PosReference;
+                            DELETE FROM ProductModifierGroups WHERE ProductPosRef = @PosReference;
+                            DELETE FROM Products WHERE PosReference = @PosReference;
+                        ";
+
+                        using (SqlCommand cmd = new SqlCommand(sql, conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@PosReference", posReference);
+
+                            int rowsAffected = await cmd.ExecuteNonQueryAsync();
+
+                            transaction.Commit();
+
+                            return rowsAffected > 0;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = "DeleteProductAndRelationsByPosReferenceAsync",
+                    MethodName = nameof(DeleteProductAndRelationsByPosReferenceAsync),
+                    ErrorOccurredDateTime = DateTime.Now
+                });
+
+                return false;
+            }
+        }
+
+        #endregion DeleteProductAndRelationsByPosReferenceAsync
+
+        #region GetPosHubCategoryIdByPosReferenceAsync
+        public async Task<string?> GetPosHubCategoryIdByPosReferenceAsync(string posReference)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(_defaultConnectionString))
+                {
+                    await conn.OpenAsync();
+
+                    string sql = @"
+                        SELECT PosHubCategoryId 
+                        FROM Categories 
+                        WHERE PosReference = @PosReference;";
+
+                    using (SqlCommand cmd = new SqlCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@PosReference", posReference ?? (object)DBNull.Value);
+
+                        object result = await cmd.ExecuteScalarAsync();
+
+                        if (result != null && result != DBNull.Value)
+                        {
+                            return result.ToString();
+                        }
+
+                        return null;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ApiErrorMessageModel error = new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = "GetPosHubCategoryIdByPosReferenceAsync",
+                    MethodName = nameof(GetPosHubCategoryIdByPosReferenceAsync),
+                    ErrorOccurredDateTime = DateTime.Now
+                };
+
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
+                return null;
+            }
+        }
+        #endregion GetPosHubCategoryIdByPosReferenceAsync
+
+        #region DeleteCategoryAndRelationsByPosReferenceAsync
+        public async Task<bool> DeleteCategoryAndRelationsByPosReferenceAsync(string posReference)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(_defaultConnectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (SqlTransaction transaction = conn.BeginTransaction())
+                    {
+                        string sql = @"
+                                    DELETE FROM ServiceTimePeriods
+                                    WHERE ServiceAvailabilityId IN (
+                                        SELECT ServiceAvailabilityId
+                                        FROM CategoryServiceAvailability
+                                        WHERE CategoryPosRef = @PosReference);
+                                    DELETE FROM CategoryServiceAvailability WHERE CategoryPosRef = @PosReference;
+                                    DELETE FROM ProductCategories WHERE CategoryPosRef = @PosReference;
+                                    DELETE FROM Categories WHERE PosReference = @PosReference;
+                                ";
+
+                        using (SqlCommand cmd = new SqlCommand(sql, conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@PosReference", posReference);
+
+                            int rowsAffected = await cmd.ExecuteNonQueryAsync();
+
+                            transaction.Commit();
+
+                            return rowsAffected > 0;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = "DeleteCategoryAndRelationsByPosReferenceAsync",
+                    MethodName = nameof(DeleteCategoryAndRelationsByPosReferenceAsync),
+                    ErrorOccurredDateTime = DateTime.Now
+                });
+
+                return false;
+            }
+        }
+
+        #endregion DeleteCategoryAndRelationsByPosReferenceAsync
+
+        public async Task<bool> UpdateProductByPosRefId(ProductDto product, string apiCall)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(_defaultConnectionString))
+                {
+                    await conn.OpenAsync();
+
+                        string sql = @"
+                                UPDATE Products
+                                SET ShowOnline = @ShowOnline, PosVersion = CAST(CAST(PosVersion AS FLOAT) + 0.1 AS NVARCHAR(10)), UpdatedAt = GetDate()
+                                WHERE PosReference = @PosReference ;";
+
+                        using (SqlCommand cmd = new SqlCommand(sql, conn))
+                        {
+                            cmd.Parameters.AddWithValue("@ShowOnline", product.ShowOnline);
+                            cmd.Parameters.AddWithValue("@PosReference", product.PosReference ?? (object)DBNull.Value);
+                            await cmd.ExecuteNonQueryAsync();
+                        }
+                    }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ApiErrorMessageModel error = new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = apiCall,
+                    MethodName = nameof(UpdateProductByPosRefId),
+                    ErrorOccurredDateTime = DateTime.Now
+
                 };
 
                 await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
