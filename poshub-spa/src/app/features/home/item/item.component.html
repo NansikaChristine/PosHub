@@ -95,8 +95,11 @@
 
 
 <div class="actions mb-3">
-  <button *ngIf="currentClient.authorized" class="btn btn-primary" (click)="getCatalogProducts('1')">
+  <button *ngIf="currentClient.authorized" class="btn btn-primary me-2" (click)="getCatalogProducts()">
     Get Products
+  </button>
+  <button *ngIf="currentClient.authorized" class="btn btn-warning" (click)="backPage()">
+    Back
   </button>
 </div>
 
@@ -148,9 +151,13 @@
         <input type="text" class="form-control" [(ngModel)]="selectedProduct.posReference" name="posReference" readonly>
       </div>
       <div class="col-md-4 d-flex align-items-center">
-        <label class="switch">Show Online</label>
-        <input type="checkbox" [(ngModel)]="selectedProduct.showOnline">
+        <label class="me-2">Stock Status</label>
+        <select [(ngModel)]="selectedProduct.showOnline" class="form-select form-select-sm w-auto">
+          <option [ngValue]="true">In Stock</option>
+          <option [ngValue]="false">Out of Stock</option>
+        </select>
       </div>
+      
       <div class="col-md-4">
         <label class="form-label">Name</label>
         <input type="text" class="form-control" [(ngModel)]="selectedProduct.name" name="name" readonly>

@@ -6,6 +6,8 @@ import { ClientsDto } from "../dtos/clientsDto";
 import { CatalogProductsResponseDto } from "../dtos/catalogProductsResponseDto";
 import { UpdateOrderEventRequestUIDto } from "../dtos/updateOrderEventRequestUIDto";
 import { ProductDto } from "../dtos/productDto";
+import { CatalogModifiersResponseDto } from "../dtos/catalogModifiersResponseDto";
+import { ModifierDto } from "../dtos/modifierDto";
 
 /**
  * @description
@@ -25,9 +27,9 @@ export class PosHubCatalogService {
     return this.http.post<boolean>(url, {});
   }
 
-  public GetCatalogProducts(applicationId: string, limit: string): Observable<CatalogProductsResponseDto> {
-    const url = environment.apiUrl + 'Catalog/getCatalogProducts/' + applicationId + '/' + limit;
-    return this.http.get<CatalogProductsResponseDto>(url, {});
+  public GetCatalogProducts(): Observable<ProductDto[]> {
+    const url = environment.apiUrl + 'Catalog/getCatalogProducts';
+    return this.http.get<ProductDto[]>(url, {});
   }
 
   public getClientsDetails() {
@@ -59,5 +61,14 @@ export class PosHubCatalogService {
   public deleteAuthorize(applicationId: string): Observable<any> {
     const url = environment.apiUrl + 'PosHubAuthApi/deleteAuthorize/' + applicationId;
     return this.http.put<any>(url, {});
+  }
+
+  public GetCatalogModifiers(applicationId: string, limit: string): Observable<CatalogModifiersResponseDto> {
+    const url = environment.apiUrl + 'Catalog/getCatalogModifiers/' + applicationId + '/' + limit;
+    return this.http.get<CatalogModifiersResponseDto>(url, {});
+  }
+  public updateModifierByPosRefId(dto: ModifierDto, applicationId: string): Observable<any> {
+    const url = environment.apiUrl + 'Catalog/updateModifierByPosRefId/' + applicationId;
+    return this.http.patch<any>(url, dto);
   }
 }

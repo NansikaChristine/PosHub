@@ -7,6 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { CategoryComponent } from './category/category.component';
 import { OrderComponent } from './order/order.component';
+import { ModifierComponent } from './modifier/modifier.component';
 
 
 @NgModule({
@@ -14,7 +15,8 @@ import { OrderComponent } from './order/order.component';
     HomeComponent,
     ItemComponent,
     CategoryComponent,
-    OrderComponent
+    OrderComponent,
+    ModifierComponent
   ],
   imports: [
     CommonModule,

@@ -30,6 +30,10 @@ export class HomeComponent implements OnInit {
     this.router.navigate(['home/item']);
   }
 
+  public viewModifier(): void {
+    this.router.navigate(['home/modifier']);
+  }
+
   public viewCategory(): void {
     this.router.navigate(['home/category']);
   }
@@ -38,4 +42,7 @@ export class HomeComponent implements OnInit {
     this.router.navigate(['home/order']);
   }
 
+  public backPage():void{
+    this.router.navigate(['/']);
+  }
 }

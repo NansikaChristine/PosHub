@@ -1,0 +1,75 @@
+<div class="actions mb-3">
+  <button *ngIf="currentClient.authorized" class="btn btn-primary me-2" (click)="getCatalogModifiers('1')">
+    Get Modifiers
+  </button>
+  <button *ngIf="currentClient.authorized" class="btn btn-warning" (click)="backPage()">
+    Back
+  </button>
+</div>
+
+<div class="table-responsive" *ngIf="showModifiersTable && modifiers.length > 0">
+  <table class="table table-hover table-striped align-middle shadow-sm rounded">
+    <thead class="table-header">
+      <tr>
+        <!-- <th>Pos Reference</th> -->
+        <th>Name</th>
+        <th>Description</th>
+        <th>Price</th>
+        <th>Show Online</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let modifier of modifiers">
+        <!-- <td>{{ modifier.catalogModifierId }}</td> -->
+        <td>{{ modifier.name }}</td>
+        <td class="desc-width">{{ modifier.description }}</td>
+        <td>{{ modifier.price | currency }}</td>
+        <td>
+          <label class="switch">
+            <input type="checkbox" [(ngModel)]="modifier.showOnline" disabled>
+            <span class="slider round"></span>
+          </label>
+        </td>
+        <td>
+        <button class="btn btn-primary btn-sm me-2" style="font-size: 10px !important;" type="button"
+          (click)="selectModifier(modifier)">
+          <i class="fa fa-edit"></i>
+        </button>
+        <!-- <button class="btn btn-danger btn-sm" type="button" (click)="deleteCatalogProductsByPosRefId(product)">
+          <i class="fa fa-trash"></i>
+        </button> -->
+      </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+
+<div *ngIf="showModifiersEdit" class="edit-form">
+  <form>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">Pos Reference No</label>
+        <input type="text" class="form-control" [(ngModel)]="selectedModifier.posReference" name="posReference" readonly>
+      </div>
+      <div class="col-md-4 d-flex align-items-center">
+        <label class="me-2">Stock Status</label>
+        <select [(ngModel)]="selectedModifier.showOnline" class="form-select form-select-sm w-auto">
+          <option [ngValue]="true">In Stock</option>
+          <option [ngValue]="false">Out of Stock</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Name</label>
+        <input type="text" class="form-control" [(ngModel)]="selectedModifier.name" name="name" readonly>
+      </div>
+    </div>
+
+    <div class="mt-3 text-center">
+      <button type="button" class="btn btn-primary me-2" (click)="updateModifier()">Save</button>
+      <button type="button" class="btn btn-secondary" (click)="clearModifier()">Cancel</button>
+    </div>
+  </form>
+</div>
+

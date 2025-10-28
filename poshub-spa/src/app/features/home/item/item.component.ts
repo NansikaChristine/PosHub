@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, OnInit, ViewChild } from '@angular/core';
 import { ToastService } from '../../../services/toast.service';
 import { PosHubCatalogService } from '../../../services/PosHubCatalog.service';
 import { ClientsDto } from '../../../dtos/clientsDto';
@@ -25,6 +25,7 @@ export class ItemComponent implements OnInit {
     private router: Router,
     public toasterService: ToastService,
     public posHubService: PosHubCatalogService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
@@ -67,13 +68,13 @@ export class ItemComponent implements OnInit {
     });
   }
 
-  public getCatalogProducts(limit: string): void {
-    const applicationId = this.currentClient.applicationId;
-    this.posHubService.GetCatalogProducts(applicationId, limit).subscribe({
+  public getCatalogProducts(): void {
+    this.posHubService.GetCatalogProducts().subscribe({
       next: (res) => {
-        this.products = res.data;
+        this.products = res;
         this.showProductsTable = true;
         this.showProductsEdit = false;
+        this.cdr.detectChanges();
         this.toasterService.success('Get Catalog products successfully:');
       },
       error: (err) => {
@@ -103,11 +104,6 @@ export class ItemComponent implements OnInit {
     this.showProductsTable = false;
   }
 
-  // saveProduct() {
-  //   console.log("Saved");
-  //   this.showProductsEdit = false;
-  //   this.showProductsTable = true;
-  // }
   clearProduct() {
     this.selectedProduct = undefined!;
     this.showProductsEdit = false;
@@ -119,9 +115,9 @@ export class ItemComponent implements OnInit {
     this.posHubService.updateProductByPosRefId(this.selectedProduct, this.currentClient.applicationId).subscribe({
       next: (res) => {
         this.toasterService.success('Product update successfully:');
+        this.getCatalogProducts();
         this.showProductsTable = true;
         this.showProductsEdit = false;
-        this.getCatalogProducts('1');
       },
       error: (err) => {
         this.toasterService.error('Error update Catalog products:', err);
@@ -129,4 +125,7 @@ export class ItemComponent implements OnInit {
     });
   }
 
+  public backPage():void{
+    this.router.navigate(['/home']);
+  }
 }
