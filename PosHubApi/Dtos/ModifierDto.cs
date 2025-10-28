@@ -1,10 +1,10 @@
 using System.Text.Json.Serialization;
+using AutoMapper.Configuration.Conventions;
 
 namespace PosHubApi.Dtos
 {
     public class ModifierDto
     {
-        [JsonPropertyName("catalogModifierId")]
         public string PosReference { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
@@ -23,6 +23,12 @@ namespace PosHubApi.Dtos
         public int MaxPermitted { get; set; }
         public NutritionalInfoDto NutritionalInfo { get; set; } = new();
         public List<SelectionDto> Selections { get; set; } = new();
-
+        public string AccountId { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public List<string> TaxRateIds { get; set; }
+        public string LocationId { get; set; }
+        public string ImageUrl { get; set; }
+        public DateTime UpdatedAt { get; set; }
+        public string Id { get; set; }
     }
 }

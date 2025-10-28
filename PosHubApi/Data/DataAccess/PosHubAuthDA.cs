@@ -363,5 +363,92 @@ namespace PosHubApi     .Data.DataAccess
 
         #endregion DeleteAuthorize
 
+        #region  GetCatalogProductsDetails
+        public async Task<List<ProductDto>> GetCatalogProductsDetails(string apiCall)
+        {
+            List<ProductDto> products = new List<ProductDto>();
+
+            string Sql = @"
+                SELECT p.PosReference,p.Name,p.Description,p.Type,p.PosVersion,p.OriginalImageUrl,p.Price,
+                p.InStorePrice,p.TaxRate,p.IsTaxIncluded,p.ContainsAlcohol,p.ContainsTobacco,p.IsBikeFriendly,
+                p.ShowOnline,p.Position,
+                    STUFF((
+                        SELECT ',' + c.Name
+                        FROM [PosHubDb].[dbo].[ProductCategories] pc
+                        INNER JOIN [PosHubDb].[dbo].[Categories] c 
+                            ON pc.CategoryPosRef = c.PosReference
+                        WHERE pc.ProductPosRef = p.PosReference
+                        FOR XML PATH(''), TYPE
+                    ).value('.', 'NVARCHAR(MAX)'), 1, 1, '') AS Categories
+                FROM [PosHubDb].[dbo].[Products] p; ";
+
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_defaultConnectionString))
+                {
+                    #region Execute SQL
+                    await connection.OpenAsync();
+                    using (SqlCommand command = new SqlCommand(Sql, connection))
+                    {
+                        command.CommandTimeout = 60 * 60;
+
+                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                        {
+                            #region Fill category
+                            while (await reader.ReadAsync())
+                            {
+                                {
+                                    ProductDto product = new ProductDto();
+                                    try { product.PosReference = reader.GetString(0); } catch { }
+                                    try { product.Name = reader.GetString(1); } catch { }
+                                    try { product.Description = reader.GetString(2); } catch { }
+                                    try { product.Type = reader.GetString(3); } catch { }
+                                    try { product.PosVersion = reader.GetString(4); } catch { }
+                                    try { product.OriginalImageUrl = reader.GetString(5); } catch { }
+                                    try { product.Price = reader.GetDecimal(6); } catch { }
+                                    try { product.InStorePrice = reader.GetDecimal(7); } catch { }
+                                    try { product.TaxRate = reader.GetDecimal(8); } catch { }
+                                    try { product.IsTaxIncluded = reader.GetBoolean(9); } catch { }
+                                    try { product.ContainsAlcohol = reader.GetBoolean(10); } catch { }
+                                    try { product.ContainsTobacco = reader.GetBoolean(11); } catch { }
+                                    try { product.IsBikeFriendly = reader.GetBoolean(12); } catch { }
+                                    try { product.ShowOnline = reader.GetBoolean(13); } catch { }
+                                    try { product.Position = reader.GetInt32(14); } catch { }
+                                    try { string categoriesString = reader.IsDBNull(15) ? "" : reader.GetString(15);
+                                            product.Categories = categoriesString
+                                                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                                                .Select(c => c.Trim())
+                                                .ToList(); } catch { product.Categories = new List<string>(); }
+
+                                    products.Add(product);
+                                }
+                            }
+                            #endregion Fill category
+                        }
+                    }
+                    return products;
+                    #endregion Execute SQL
+                }
+            }
+            catch (Exception ex)
+            {
+                ApiErrorMessageModel error = new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = apiCall,
+                    MethodName = nameof(GetCatalogProductsDetails),
+                    ErrorOccurredDateTime = DateTime.Now
+                };
+
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
+                throw;
+            }
+        }
+        
+        #endregion  GetCatalogProductsDetails
+
     }
 }

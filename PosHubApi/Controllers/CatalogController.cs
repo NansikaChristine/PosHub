@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using PosHubApi.Data.Interfaces;
@@ -25,6 +26,9 @@ namespace PosHubApi.Controllers
         {
             string apiCall = $"Catalog/pull";
             (CatalogImportEntityDto, bool) catalog = await _catalogRrepository.GetPullCatalogAsync(apiCall);
+            string json = JsonSerializer.Serialize(catalog.Item1);
+
+            Console.WriteLine(json);
 
             if (!catalog.Item2) return BadRequest("Failed to pull catalog to PosHub.");
             else return Ok(catalog.Item1);
@@ -42,13 +46,13 @@ namespace PosHubApi.Controllers
             return Ok(success);
         }
 
-        [HttpGet("getCatalogProducts/{applicationId}/{limit}")]
-        public async Task<ActionResult<CatalogProductsResponseDto>> GetCatalogProducts(string applicationId, string limit)
+        [HttpGet("getCatalogProducts")]
+        public async Task<ActionResult<List<ProductDto>>> GetCatalogProducts()
         {
             try
             {
-                string apiCall = $"Catalog/getCatalogProducts/{applicationId}/{limit}";
-                CatalogProductsResponseDto products = await _catalogRrepository.GetCatalogProducts(applicationId, limit, apiCall);
+                string apiCall = $"Catalog/getCatalogProducts";
+                List<ProductDto> products = await _catalogRrepository.GetCatalogProducts(apiCall);
                 return Ok(products);
             }
             catch (Exception ex)
@@ -105,7 +109,6 @@ namespace PosHubApi.Controllers
         [HttpDelete("deleteCatalogProductByPosRefId/{applicationId}/{posRefId}")]
         public async Task<ActionResult<bool>> DeleteCatalogProductByPosRefId(string applicationId, string posRefId)
         {
-            Console.WriteLine(posRefId);
             try
             {
                 string apiCall = $"Catalog/deleteCatalogProductByPosRefId/{applicationId}/{posRefId}";
@@ -179,6 +182,38 @@ namespace PosHubApi.Controllers
                 return BadRequest(new { error = ex.Message });
             }
         }
+    
+        [HttpGet("getCatalogModifiers/{applicationId}/{limit}")]
+        public async Task<ActionResult<CatalogModifiersResponseDto>> GetCatalogModifiers(string applicationId, string limit)
+        {
+            try
+            {
+                string apiCall = $"Catalog/getCatalogModifiers";
+                CatalogModifiersResponseDto modifiers = await _catalogRrepository.GetCatalogModifiers(applicationId, limit, apiCall);
+                return Ok(modifiers);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpPatch("updateModifierByPosRefId/{applicationId}")]
+        public async Task<ActionResult> UpdateModifierByPosRefId(ModifierDto modifier,string applicationId)
+        {
+            try
+            {
+                string apiCall = $"Catalog/updateModifierByPosRefId/{applicationId}";
+                bool isUpdate = await _catalogRrepository.UpdateModifierByPosRefId(applicationId, modifier, apiCall);
+                return Ok(true);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+    
+    
     
     }
 }

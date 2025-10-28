@@ -35,6 +35,7 @@ namespace PosHubApi.Data.Repositories
             _baseUrl = configuration.GetSection("PosHubUrl").Value;
             _logsDA = logsDA;
         }
+
         // public async Task<CatalogImportEntityDto> GetCatalogAsync(ClientsDto client)
         // {
         //     string url = $"{_baseUrl}/v1/accounts/{client.AccountId}/locations/{client.LocationId}/connections/{client.ConnectionId}/pull";
@@ -164,11 +165,19 @@ namespace PosHubApi.Data.Repositories
                         ni.SugarLower, ni.SugarUpper, ni.SaturatedFatLower, ni.SaturatedFatUpper, ni.SaltLower, ni.SaltUpper;
                 
                 -- ModifierGroups
-                SELECT mg.PosReference, mg.Name, mg.Description, mg.PosVersion, mg.Position, mg.MinPermitted, mg.MaxPermitted,
+                SELECT mg.PosReference,mg.Name,mg.Description,mg.PosVersion,mg.Position,mg.MinPermitted,mg.MaxPermitted,
+                    mm.ModifierPosRef,m.Name AS ModifierName,m.PosHubModifierId,m.Price 
+                FROM ModifierGroups mg
+                LEFT JOIN ModifierGroupModifiers mm ON mm.ModifierGroupPosRef = mg.PosReference
+                LEFT JOIN Modifiers m ON m.PosReference = mm.ModifierPosRef
+                ORDER BY mg.PosReference, mm.ModifierPosRef;
+
+
+                /* SELECT mg.PosReference, mg.Name, mg.Description, mg.PosVersion, mg.Position, mg.MinPermitted, mg.MaxPermitted,
                     mm.ModifierPosRef
                 FROM ModifierGroups mg
                 LEFT JOIN ModifierGroupModifiers mm ON mm.ModifierGroupPosRef = mg.PosReference
-                ORDER BY mg.PosReference, mm.ModifierPosRef;
+                ORDER BY mg.PosReference, mm.ModifierPosRef; */
                
 
             -- Products
@@ -366,12 +375,21 @@ namespace PosHubApi.Data.Repositories
                                             Position = Convert.ToInt32(reader["Position"]),
                                             MinPermitted = Convert.ToInt32(reader["MinPermitted"]),
                                             MaxPermitted = Convert.ToInt32(reader["MaxPermitted"]),
-                                            Modifiers = modifiers
-                                                .Where(m => m.PosReference == reader["ModifierPosRef"].ToString())
-                                                .ToList()
+                                            Modifiers = new List<ModifierDtoForGroupDto>()
                                         };
                                         modifierGroups.Add(currentGroup);
                                         lastGroupRef = groupRef;
+                                    }
+                                    if (reader["ModifierPosRef"] != DBNull.Value)
+                                    {
+                                        var modifierForGroup = new ModifierDtoForGroupDto
+                                        {
+                                            Id = reader["PosHubModifierId"].ToString(),
+                                            Name = reader["ModifierName"].ToString(),
+                                            Price = reader["Price"] != DBNull.Value ? Convert.ToDecimal(reader["Price"]) : 0
+                                        };
+
+                                        currentGroup.Modifiers.Add(modifierForGroup);
                                     }
                                 }
 
@@ -516,111 +534,117 @@ namespace PosHubApi.Data.Repositories
 
         }
 
-        public async Task<CatalogProductsResponseDto> GetCatalogProducts(string applicationId, string limit, string apiCall)
+        // public async Task<CatalogProductsResponseDto> GetCatalogProducts(string applicationId, string limit, string apiCall)
+        // {
+        //     ClientsDto client = await _posHubAuthDA.GetClientDetailsByClientIdAsync(applicationId, apiCall);
+        //     CatalogProductsResponseDto finalResponse = new CatalogProductsResponseDto
+        //     {
+        //         Data = new List<ProductDto>()
+        //     };
+
+        //     string nextPageKey = null;
+        //     string lastUrl = string.Empty;
+
+        //     try
+        //     {
+        //         do
+        //         {
+        //             string url = $"{_baseUrl}/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products?limit={limit}";
+
+        //             if (!string.IsNullOrEmpty(nextPageKey))
+        //             {
+        //                 url += $"&nextPageKey={nextPageKey}";
+        //             }
+        //             lastUrl = url;
+
+        //             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
+        //             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
+
+        //             HttpResponseMessage response = await _httpClient.SendAsync(request);
+        //             Console.WriteLine("count");
+        //             if (!response.IsSuccessStatusCode)
+        //             {
+        //                 string body = await response.Content.ReadAsStringAsync();
+
+        //                 await _logsDA.InsertLogAsync(new LogModel
+        //                 {
+        //                     Url = url,
+        //                     Event = "GetCatalogProducts",
+        //                     IsSuccess = false,
+        //                     FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}",
+        //                     RequestBody = body,
+        //                     ApplicationId = applicationId
+        //                 });
+        //                 await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
+        //                 {
+        //                     ErrorMessage = $"API call failed with status {response.StatusCode}. Body: {body}",
+        //                     ApiCall = apiCall,
+        //                     MethodName = nameof(GetCatalogProducts),
+        //                     ErrorOccurredDateTime = DateTime.Now,
+        //                     ClientId = applicationId
+
+        //                 });
+        //                 return finalResponse;
+        //             }
+
+        //             string json = await response.Content.ReadAsStringAsync();
+
+        //             CatalogProductsResponseDto catalogResponse = JsonSerializer.Deserialize<CatalogProductsResponseDto>(json,
+        //                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        //             if (catalogResponse?.Data != null && catalogResponse.Data.Any())
+        //             {
+        //                 finalResponse.Data.AddRange(catalogResponse.Data);
+        //                 await _catalogDA.UpdatePosHubProductIdsAsync(catalogResponse.Data, apiCall);
+        //             }
+        //             nextPageKey = catalogResponse?.NextPageKey;
+        //         }
+
+        //         while (!string.IsNullOrEmpty(nextPageKey));
+
+        //         await _logsDA.InsertLogAsync(new LogModel
+        //         {
+        //             Url = lastUrl,
+        //             Event = "GetCatalogProducts",
+        //             IsSuccess = true,
+        //             FailMessage = "",
+        //             RequestBody = "",
+        //             ApplicationId = applicationId
+        //         });
+        //         return finalResponse;
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         await _logsDA.InsertLogAsync(new LogModel
+        //         {
+        //             Url = lastUrl,
+        //             Event = "GetCatalogProducts",
+        //             IsSuccess = false,
+        //             FailMessage = "",
+        //             RequestBody = "",
+        //             ApplicationId = applicationId
+        //         });
+        //         ApiErrorMessageModel error = new ApiErrorMessageModel
+        //         {
+        //             ErrorMessage = ex.Message,
+        //             ErrorSource = ex.Source,
+        //             StackTrace = ex.StackTrace,
+        //             InnerErrorMessage = ex.InnerException?.Message ?? "",
+        //             ApiCall = apiCall,
+        //             MethodName = nameof(GetCatalogProducts),
+        //             ErrorOccurredDateTime = DateTime.Now,
+        //             ClientId = applicationId
+        //         };
+
+        //         await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
+        //         return finalResponse;
+        //     }
+        // }
+
+        public async Task<List<ProductDto>> GetCatalogProducts(string apiCall)
         {
-            ClientsDto client = await _posHubAuthDA.GetClientDetailsByClientIdAsync(applicationId, apiCall);
-            CatalogProductsResponseDto finalResponse = new CatalogProductsResponseDto
-            {
-                Data = new List<ProductDto>()
-            };
-
-            string nextPageKey = null;
-            string lastUrl = string.Empty;
-
-            try
-            {
-                do
-                {
-                    string url = $"{_baseUrl}/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products?limit={limit}";
-
-                    if (!string.IsNullOrEmpty(nextPageKey))
-                    {
-                        url += $"&nextPageKey={nextPageKey}";
-                    }
-                    lastUrl = url;
-
-                    HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
-                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
-
-                    HttpResponseMessage response = await _httpClient.SendAsync(request);
-                    Console.WriteLine("count");
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        string body = await response.Content.ReadAsStringAsync();
-
-                        await _logsDA.InsertLogAsync(new LogModel
-                        {
-                            Url = url,
-                            Event = "GetCatalogProducts",
-                            IsSuccess = false,
-                            FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}",
-                            RequestBody = body,
-                            ApplicationId = applicationId
-                        });
-                        await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
-                        {
-                            ErrorMessage = $"API call failed with status {response.StatusCode}. Body: {body}",
-                            ApiCall = apiCall,
-                            MethodName = nameof(GetCatalogProducts),
-                            ErrorOccurredDateTime = DateTime.Now,
-                            ClientId = applicationId
-
-                        });
-                        return finalResponse;
-                    }
-
-                    string json = await response.Content.ReadAsStringAsync();
-
-                    CatalogProductsResponseDto catalogResponse = JsonSerializer.Deserialize<CatalogProductsResponseDto>(json,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                    if (catalogResponse?.Data != null && catalogResponse.Data.Any())
-                    {
-                        finalResponse.Data.AddRange(catalogResponse.Data);
-                        await _catalogDA.UpdatePosHubProductIdsAsync(catalogResponse.Data, apiCall);
-                    }
-                    nextPageKey = catalogResponse?.NextPageKey;
-                }
-
-                while (!string.IsNullOrEmpty(nextPageKey));
-
-                await _logsDA.InsertLogAsync(new LogModel
-                {
-                    Url = lastUrl,
-                    Event = "GetCatalogProducts",
-                    IsSuccess = true,
-                    FailMessage = "",
-                    RequestBody = "",
-                    ApplicationId = applicationId
-                });
-                return finalResponse;
-            }
-            catch (Exception ex)
-            {
-                await _logsDA.InsertLogAsync(new LogModel
-                {
-                    Url = lastUrl,
-                    Event = "GetCatalogProducts",
-                    IsSuccess = false,
-                    FailMessage = "",
-                    RequestBody = "",
-                    ApplicationId = applicationId
-                });
-                ApiErrorMessageModel error = new ApiErrorMessageModel
-                {
-                    ErrorMessage = ex.Message,
-                    ErrorSource = ex.Source,
-                    StackTrace = ex.StackTrace,
-                    InnerErrorMessage = ex.InnerException?.Message ?? "",
-                    ApiCall = apiCall,
-                    MethodName = nameof(GetCatalogProducts),
-                    ErrorOccurredDateTime = DateTime.Now,
-                    ClientId = applicationId
-                };
-
-                await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
-                return finalResponse;
-            }
+            List<ProductDto> products = await _posHubAuthDA.GetCatalogProductsDetails(apiCall);
+            return products;
         }
 
         public async Task<ProductDto> GetCatalogProductByProductId(string applicationId, string productId, string apiCall)
@@ -823,8 +847,6 @@ namespace PosHubApi.Data.Repositories
 
                 request.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-                Console.WriteLine(jsonContent);
-                ;
                 HttpResponseMessage response = await _httpClient.SendAsync(request);
 
                 if (!response.IsSuccessStatusCode)
@@ -1225,39 +1247,104 @@ namespace PosHubApi.Data.Repositories
 
         public async Task<bool> UpdateProductByPosRefId(string applicationId, ProductDto product, string apiCall)
         {
+
+            ClientsDto client = await _posHubAuthDA.GetClientDetailsByClientIdAsync(applicationId, apiCall);
+            string? posHubProductId = await _catalogDA.GetPosHubProductIdByPosReferenceAsync(product.PosReference);
+            string url = $"{_baseUrl}/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/products/{posHubProductId}";
+
             try
             {
-                // ClientsDto client = await _posHubAuthDA.GetClientDetailsByClientIdAsync(applicationId, apiCall);
-                // Console.WriteLine("Client " + client);
+                if (string.IsNullOrEmpty(posHubProductId))
+                {
+                    List<ProductDataResponseByPosRefDto> externalProducts = await GetCatalogProductByPosRefId(applicationId, product.PosReference, apiCall);
 
-                // string? posHubProductId = await _catalogDA.GetPosHubProductIdByPosReferenceAsync(product.PosReference);
+                    if (externalProducts != null && externalProducts.Count > 0)
+                    {
+                        ProductDataResponseByPosRefDto productData = externalProducts.FirstOrDefault();
+                        posHubProductId = productData?.Id;
+                    }
+                }
 
-                // if (string.IsNullOrEmpty(posHubProductId))
-                // {
-                //     List<ProductDataResponseByPosRefDto> externalProducts = await GetCatalogProductByPosRefId(applicationId, product.PosReference, apiCall);
+                if (string.IsNullOrEmpty(posHubProductId))
+                {
+                    await _logsDA.InsertLogAsync(new LogModel
+                    {
+                        Url = apiCall,
+                        Event = "UpdateProductByPosRefId",
+                        IsSuccess = false,
+                        FailMessage = "PosHubProductId not found from DB or API.",
+                        RequestBody = "",
+                        ApplicationId = applicationId,
+                        UniqueId = product.PosReference
+                    });
 
-                //     if (externalProducts != null && externalProducts.Count > 0)
-                //     {
-                //         ProductDataResponseByPosRefDto products = externalProducts.FirstOrDefault();
-                //         posHubProductId = product?.Id;
-                //     }
-                // }
+                    return false;
+                }
 
-                // if (string.IsNullOrEmpty(posHubProductId))
-                // {
-                //     await _logsDA.InsertLogAsync(new LogModel
-                //     {
-                //         Url = apiCall,
-                //         Event = "UpdateProductByPosRefId",
-                //         IsSuccess = false,
-                //         FailMessage = "PosHubProductId not found from DB or API.",
-                //         RequestBody = "",
-                //         ApplicationId = applicationId,
-                //         UniqueId = product.PosReference
-                //     });
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Patch, url);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
 
-                //     return false;
-                // }
+                JsonSerializerOptions options = new JsonSerializerOptions
+                {
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                };
+
+                ProductUpdateRequestDto productUpdateRequestDto = new ProductUpdateRequestDto();
+                productUpdateRequestDto.NutritionalInfo = product.NutritionalInfo;
+                productUpdateRequestDto.ContainsAlcohol = product.ContainsAlcohol;
+                productUpdateRequestDto.IsTaxIncluded = product.IsTaxIncluded;
+                productUpdateRequestDto.PosVersion = product.PosVersion;
+                productUpdateRequestDto.Description = product.Description;
+                productUpdateRequestDto.Type = product.Type;
+                productUpdateRequestDto.ModifierGroups = product.ModifierGroups;
+                // productUpdateRequestDto.ParentId = product.ParentId;
+                productUpdateRequestDto.OriginalImageUrl = product.OriginalImageUrl;
+                productUpdateRequestDto.TaxRate = product.TaxRate;
+                productUpdateRequestDto.IsBikeFriendly = product.IsBikeFriendly;
+                productUpdateRequestDto.ShowOnline = product.ShowOnline;
+                productUpdateRequestDto.IsBikeFriendly = product.IsBikeFriendly;
+                // productUpdateRequestDto.Selections = product.Selections;
+                // productUpdateRequestDto.TaxRateIds = product.TaxRateIds;
+                productUpdateRequestDto.Price = product.Price;
+                productUpdateRequestDto.Name = product.Name;
+                productUpdateRequestDto.ContainsTobacco = product.ContainsTobacco;
+                productUpdateRequestDto.ServiceAvailability = product.ServiceAvailability;
+                productUpdateRequestDto.Categories = product.Categories;
+                productUpdateRequestDto.Position = product.Position;
+                // productUpdateRequestDto.InStorePrice = product.InStorePrice;
+
+                string jsonContent = JsonSerializer.Serialize(productUpdateRequestDto, options);
+
+                request.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await _httpClient.SendAsync(request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    string body = await response.Content.ReadAsStringAsync();
+
+                    await _logsDA.InsertLogAsync(new LogModel
+                    {
+                        Url = url,
+                        Event = "UpdateProductByPosRefId",
+                        IsSuccess = false,
+                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}",
+                        RequestBody = body,
+                        ApplicationId = applicationId,
+                        UniqueId = posHubProductId
+                    });
+
+                    await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
+                    {
+                        ErrorMessage = $"API call failed with status {response.StatusCode}. Body: {body}",
+                        ApiCall = apiCall,
+                        MethodName = nameof(UpdateProductByPosRefId),
+                        ErrorOccurredDateTime = DateTime.Now,
+                        ClientId = applicationId
+                    });
+                    return false;
+                }
 
                 bool isUpdated = await _catalogDA.UpdateProductByPosRefId(product, apiCall);
 
@@ -1276,23 +1363,23 @@ namespace PosHubApi.Data.Repositories
                     return false;
                 }
 
-                await SyncCatalogToPosHub(applicationId, apiCall);
+                // await SyncCatalogToPosHub(applicationId, apiCall);
 
                 return true;
             }
 
             catch (Exception ex)
             {
-                // await _logsDA.InsertLogAsync(new LogModel
-                // {
-                //     Url = url,
-                //     Event = "UpdateCatalogProductByProductId",
-                //     IsSuccess = false,
-                //     FailMessage = ex.Message,
-                //     RequestBody = "",
-                //     ApplicationId = applicationId,
-                //     UniqueId = productId
-                // });
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = url,
+                    Event = "UpdateProductByPosRefId",
+                    IsSuccess = false,
+                    FailMessage = ex.Message,
+                    RequestBody = "",
+                    ApplicationId = applicationId,
+                    UniqueId = posHubProductId
+                });
                 ApiErrorMessageModel error = new ApiErrorMessageModel
                 {
                     ErrorMessage = ex.Message,
@@ -1300,7 +1387,7 @@ namespace PosHubApi.Data.Repositories
                     StackTrace = ex.StackTrace,
                     InnerErrorMessage = ex.InnerException?.Message ?? "",
                     ApiCall = apiCall,
-                    MethodName = nameof(UpdateCatalogProductByProductId),
+                    MethodName = nameof(UpdateProductByPosRefId),
                     ErrorOccurredDateTime = DateTime.Now,
                     ClientId = applicationId
                 };
@@ -1310,6 +1397,359 @@ namespace PosHubApi.Data.Repositories
             }
 
         }
+
+        public async Task<CatalogModifiersResponseDto> GetCatalogModifiers(string applicationId, string limit, string apiCall)
+        {
+            ClientsDto client = await _posHubAuthDA.GetClientDetailsByClientIdAsync(applicationId, apiCall);
+            CatalogModifiersResponseDto finalResponse = new CatalogModifiersResponseDto
+            {
+                Data = new List<ModifierDto>()
+            };
+
+            string nextPageKey = null;
+            string lastUrl = string.Empty;
+
+            try
+            {
+                do
+                {
+                    string url = $"{_baseUrl}/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/modifiers?limit={limit}";
+
+                    if (!string.IsNullOrEmpty(nextPageKey))
+                    {
+                        url += $"&nextPageKey={nextPageKey}";
+                    }
+                    lastUrl = url;
+
+                    HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
+
+                    HttpResponseMessage response = await _httpClient.SendAsync(request);
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        string body = await response.Content.ReadAsStringAsync();
+
+                        await _logsDA.InsertLogAsync(new LogModel
+                        {
+                            Url = url,
+                            Event = "GetCatalogModifiers",
+                            IsSuccess = false,
+                            FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}",
+                            RequestBody = body,
+                            ApplicationId = applicationId
+                        });
+                        await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
+                        {
+                            ErrorMessage = $"API call failed with status {response.StatusCode}. Body: {body}",
+                            ApiCall = apiCall,
+                            MethodName = nameof(GetCatalogModifiers),
+                            ErrorOccurredDateTime = DateTime.Now,
+                            ClientId = applicationId
+
+                        });
+                        return finalResponse;
+                    }
+
+                    string json = await response.Content.ReadAsStringAsync();
+
+                    CatalogModifiersResponseDto catalogResponse = JsonSerializer.Deserialize<CatalogModifiersResponseDto>(json,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (catalogResponse?.Data != null && catalogResponse.Data.Any())
+                    {
+                        finalResponse.Data.AddRange(catalogResponse.Data);
+                        await _catalogDA.UpdatePosHubModifierIdsAsync(catalogResponse.Data, apiCall);
+                    }
+                    nextPageKey = catalogResponse?.NextPageKey;
+                }
+
+                while (!string.IsNullOrEmpty(nextPageKey));
+
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = lastUrl,
+                    Event = "GetCatalogModifiers",
+                    IsSuccess = true,
+                    FailMessage = "",
+                    RequestBody = "",
+                    ApplicationId = applicationId
+                });
+                return finalResponse;
+            }
+            catch (Exception ex)
+            {
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = lastUrl,
+                    Event = "GetCatalogModifiers",
+                    IsSuccess = false,
+                    FailMessage = "",
+                    RequestBody = "",
+                    ApplicationId = applicationId
+                });
+                ApiErrorMessageModel error = new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = apiCall,
+                    MethodName = nameof(GetCatalogModifiers),
+                    ErrorOccurredDateTime = DateTime.Now,
+                    ClientId = applicationId
+                };
+
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
+                return finalResponse;
+            }
+        }
+
+        public async Task<List<ModifierDataResponseByPosRefDto>> GetCatalogModifierByPosRefId(string applicationId, string posRefId, string apiCall)
+        {
+            ClientsDto client = await _posHubAuthDA.GetClientDetailsByClientIdAsync(applicationId, apiCall);
+            Console.WriteLine("Client " + client);
+            string url = $"{_baseUrl}/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/modifiers?posReference={posRefId}";
+            try
+            {
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
+
+                HttpResponseMessage response = await _httpClient.SendAsync(request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    string body = await response.Content.ReadAsStringAsync();
+
+                    await _logsDA.InsertLogAsync(new LogModel
+                    {
+                        Url = url,
+                        Event = "GetCatalogModifierByPosRefId",
+                        IsSuccess = false,
+                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}",
+                        RequestBody = body,
+                        ApplicationId = applicationId,
+                        UniqueId = posRefId
+                    });
+
+                    await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
+                    {
+                        ErrorMessage = $"API call failed with status {response.StatusCode}. Body: {body}",
+                        ApiCall = apiCall,
+                        MethodName = nameof(GetCatalogProductByPosRefId),
+                        ErrorOccurredDateTime = DateTime.Now,
+                        ClientId = applicationId
+                    });
+                    return new List<ModifierDataResponseByPosRefDto>();
+                }
+
+                string json = await response.Content.ReadAsStringAsync();
+
+                ModifierResponseByPosRefDto modifierResponseByPosRef = JsonSerializer.Deserialize<ModifierResponseByPosRefDto>(json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (modifierResponseByPosRef?.Data != null && modifierResponseByPosRef.Data.Any())
+                {
+                    List<ModifierDto> modifiers = modifierResponseByPosRef.Data
+                                            .Select(p => new ModifierDto
+                                            {
+                                                Id = p.Id,
+                                                PosReference = p.PosReference
+                                            }).ToList();
+
+                    await _catalogDA.UpdatePosHubModifierIdsAsync(modifiers, apiCall);
+                }
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = url,
+                    Event = "GetCatalogModifierByPosRefId",
+                    IsSuccess = true,
+                    FailMessage = "",
+                    RequestBody = "",
+                    ApplicationId = applicationId,
+                    UniqueId = posRefId
+                });
+                return modifierResponseByPosRef.Data ?? new List<ModifierDataResponseByPosRefDto>();
+            }
+            catch (Exception ex)
+            {
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = url,
+                    Event = "GetCatalogModifierByPosRefId",
+                    IsSuccess = false,
+                    FailMessage = ex.Message,
+                    RequestBody = "",
+                    ApplicationId = applicationId,
+                    UniqueId = posRefId
+                });
+                ApiErrorMessageModel error = new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = apiCall,
+                    MethodName = nameof(GetCatalogProductByPosRefId),
+                    ErrorOccurredDateTime = DateTime.Now,
+                    ClientId = applicationId
+                };
+
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
+                return new List<ModifierDataResponseByPosRefDto>();
+            }
+        }
+
+        public async Task<bool> UpdateModifierByPosRefId(string applicationId, ModifierDto modifier, string apiCall)
+        {
+
+            ClientsDto client = await _posHubAuthDA.GetClientDetailsByClientIdAsync(applicationId, apiCall);
+            string? posHubModifierId = await _catalogDA.GetPosHubModifierIdByPosReferenceAsync(modifier.PosReference);
+
+            if (string.IsNullOrEmpty(posHubModifierId))
+            {
+                List<ModifierDataResponseByPosRefDto> externalModifiers = await GetCatalogModifierByPosRefId(applicationId, modifier.PosReference, apiCall);
+
+                if (externalModifiers != null && externalModifiers.Count > 0)
+                {
+                    ModifierDataResponseByPosRefDto modifierData = externalModifiers.FirstOrDefault();
+                    posHubModifierId = modifierData?.Id;
+                }
+            }
+
+            if (string.IsNullOrEmpty(posHubModifierId))
+            {
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = apiCall,
+                    Event = "UpdateModifierByPosRefId",
+                    IsSuccess = false,
+                    FailMessage = "PosHubModifierId not found from DB or API.",
+                    RequestBody = "",
+                    ApplicationId = applicationId,
+                    UniqueId = posHubModifierId
+                });
+
+                return false;
+            }
+
+            string url = $"{_baseUrl}/v1/accounts/{client.AccountId}/locations/{client.LocationId}/catalog/modifiers/{posHubModifierId}";
+
+            try
+            {
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Patch, url);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
+
+                JsonSerializerOptions options = new JsonSerializerOptions
+                {
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                };
+
+                ModifierUpdateRequestDto modifierUpdateRequestDto = new ModifierUpdateRequestDto();
+                modifierUpdateRequestDto.NutritionalInfo = modifier.NutritionalInfo;
+                modifierUpdateRequestDto.ContainsAlcohol = modifier.ContainsAlcohol;
+                modifierUpdateRequestDto.IsTaxIncluded = modifier.IsTaxIncluded;
+                modifierUpdateRequestDto.PosVersion = modifier.PosVersion;
+                modifierUpdateRequestDto.Description = modifier.Description;
+                modifierUpdateRequestDto.OriginalImageUrl = modifier.OriginalImageUrl;
+                modifierUpdateRequestDto.TaxRate = modifier.TaxRate;
+                modifierUpdateRequestDto.IsBikeFriendly = modifier.IsBikeFriendly;
+                modifierUpdateRequestDto.ShowOnline = modifier.ShowOnline;
+                modifierUpdateRequestDto.IsBikeFriendly = modifier.IsBikeFriendly;
+                modifierUpdateRequestDto.TaxRateIds = modifier.TaxRateIds;
+                modifierUpdateRequestDto.Price = modifier.Price;
+                modifierUpdateRequestDto.Name = modifier.Name;
+                modifierUpdateRequestDto.ContainsTobacco = modifier.ContainsTobacco;
+                modifierUpdateRequestDto.Position = modifier.Position;
+                // modifierUpdateRequestDto.InStorePrice = modifier.InStorePrice;
+
+                string jsonContent = JsonSerializer.Serialize(modifierUpdateRequestDto, options);
+
+                request.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await _httpClient.SendAsync(request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    string body = await response.Content.ReadAsStringAsync();
+
+                    await _logsDA.InsertLogAsync(new LogModel
+                    {
+                        Url = url,
+                        Event = "UpdateModifierByPosRefId",
+                        IsSuccess = false,
+                        FailMessage = $"Failed with status code {(int)response.StatusCode} - {response.ReasonPhrase}",
+                        RequestBody = body,
+                        ApplicationId = applicationId,
+                        UniqueId = modifier.Id
+                    });
+
+                    await _apiErrorDA.InsertOrUpdateApiErrorAsync(new ApiErrorMessageModel
+                    {
+                        ErrorMessage = $"API call failed with status {response.StatusCode}. Body: {body}",
+                        ApiCall = apiCall,
+                        MethodName = nameof(UpdateModifierByPosRefId),
+                        ErrorOccurredDateTime = DateTime.Now,
+                        ClientId = applicationId
+                    });
+                    return false;
+                }
+
+                // modifier.Id = posHubModifierId;
+
+                bool isUpdated = await _catalogDA.UpdateModifierByPosRefId(modifier, apiCall);
+
+                if (!isUpdated)
+                {
+                    var error = new ApiErrorMessageModel
+                    {
+                        ErrorMessage = "UpdateModifierByPosRefId failed for PosReference: " + modifier.PosReference,
+                        ApiCall = apiCall,
+                        MethodName = nameof(UpdateModifierByPosRefId),
+                        ErrorOccurredDateTime = DateTime.Now,
+                        ClientId = applicationId
+                    };
+
+                    await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
+                    return false;
+                }
+
+                // await SyncCatalogToPosHub(applicationId, apiCall);
+
+                return true;
+            }
+
+            catch (Exception ex)
+            {
+                await _logsDA.InsertLogAsync(new LogModel
+                {
+                    Url = url,
+                    Event = "UpdateModifierByPosRefId",
+                    IsSuccess = false,
+                    FailMessage = ex.Message,
+                    RequestBody = "",
+                    ApplicationId = applicationId,
+                    UniqueId = modifier.Id
+                });
+                ApiErrorMessageModel error = new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = apiCall,
+                    MethodName = nameof(UpdateModifierByPosRefId),
+                    ErrorOccurredDateTime = DateTime.Now,
+                    ClientId = applicationId
+                };
+
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
+                return false;
+            }
+
+        }
+
 
     }
 }

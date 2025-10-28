@@ -33,7 +33,6 @@ namespace PosHubApi.Controllers
         [HttpPost("orderWebhookEvent_")]
         public async Task<ActionResult> OrderWebhookEvent()
         {
-            Console.WriteLine("Order webhook event trigger");
             // using StreamReader reader = new StreamReader(Request.Body);
             // string body = await reader.ReadToEndAsync();
             Request.EnableBuffering();
@@ -89,12 +88,12 @@ namespace PosHubApi.Controllers
                         message = "Request body is missing or invalid."
                     });
                 }
-                Console.WriteLine("xWebhookRequest");
-                Console.WriteLine(xWebhookRequest);
+                // Console.WriteLine("xWebhookRequest");
+                // Console.WriteLine(xWebhookRequest);
 
                 string json = JsonSerializer.Serialize(xWebhookRequest);
 
-                Console.WriteLine(json);
+                // Console.WriteLine(json);
 
                 bool success = await _webhookEventRrepository.OrderWebhookEvent(xWebhookRequest, apiCall);
 

@@ -10,13 +10,15 @@ namespace PosHubApi.Data.Interfaces
     {
         Task<(CatalogImportEntityDto, bool)> GetPullCatalogAsync(string apiCall);
         Task<bool> SyncCatalogToPosHub(string applicationId, string apiCall);
-        Task<CatalogProductsResponseDto> GetCatalogProducts(string applicationId, string limit, string apiCall);
+        Task<List<ProductDto>> GetCatalogProducts(string apiCall);
         Task<ProductDto> GetCatalogProductByProductId(string applicationId, string productId, string apiCall);
         Task<ProductDto> UpdateCatalogProductByProductId(string applicationId, ProductUpdateRequestDto product,string productId, string apiCall);
         Task<bool> DeleteCatalogProductByPosRefId(string applicationId, string productId, string apiCall);
         Task<bool> DeleteCatalogCategoryByPosRefId(string applicationId, string productId, string apiCall);
         Task<List<ProductDataResponseByPosRefDto>> GetCatalogProductByPosRefId(string applicationId, string posRefId, string apiCall);
         Task<bool> UpdateProductByPosRefId(string applicationId, ProductDto product, string apiCall);
-    
+        Task<CatalogModifiersResponseDto> GetCatalogModifiers(string applicationId, string limit, string apiCall);
+        Task<bool> UpdateModifierByPosRefId(string applicationId, ModifierDto modifier, string apiCall);
+
     }
 }

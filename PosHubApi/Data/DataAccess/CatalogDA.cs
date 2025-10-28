@@ -648,5 +648,138 @@ namespace PosHubApi.Data.DataAccess
                 return false;
             }
         }
+    
+        public async Task<bool> UpdatePosHubModifierIdsAsync(List<ModifierDto> modifiers, string apiCall)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(_defaultConnectionString))
+                {
+                    await conn.OpenAsync();
+                    foreach (ModifierDto modifier in modifiers)
+                    {
+                        string sql = @"
+                                UPDATE Modifiers
+                                SET PosHubModifierId = @Id , UpdatedAt = GetDate()
+                                WHERE PosReference = @PosReference and (PosHubModifierId is NULL or PosHubModifierId='');";
+
+                        using (SqlCommand cmd = new SqlCommand(sql, conn))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", modifier.Id ?? (object)DBNull.Value);
+                            cmd.Parameters.AddWithValue("@PosReference", modifier.PosReference ?? (object)DBNull.Value);
+                            await cmd.ExecuteNonQueryAsync();
+                        }
+                    }
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ApiErrorMessageModel error = new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = apiCall,
+                    MethodName = nameof(UpdatePosHubModifierIdsAsync),
+                    ErrorOccurredDateTime = DateTime.Now
+
+                };
+
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
+                return false;
+            }
+        }
+
+        #region GetPosHubModifierIdByPosReferenceAsync
+        public async Task<string?> GetPosHubModifierIdByPosReferenceAsync(string posReference)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(_defaultConnectionString))
+                {
+                    await conn.OpenAsync();
+
+                    string sql = @"
+                        SELECT PosHubModifierId 
+                        FROM Modifiers 
+                        WHERE PosReference = @PosReference;";
+
+                    using (SqlCommand cmd = new SqlCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@PosReference", posReference ?? (object)DBNull.Value);
+
+                        object result = await cmd.ExecuteScalarAsync();
+
+                        if (result != null && result != DBNull.Value)
+                        {
+                            return result.ToString();
+                        }
+
+                        return null;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ApiErrorMessageModel error = new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = "GetPosHubModifierIdByPosReferenceAsync",
+                    MethodName = nameof(GetPosHubModifierIdByPosReferenceAsync),
+                    ErrorOccurredDateTime = DateTime.Now
+                };
+
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
+                return null;
+            }
+        }
+        #endregion GetPosHubModifierIdByPosReferenceAsync
+
+        public async Task<bool> UpdateModifierByPosRefId(ModifierDto modifier, string apiCall)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(_defaultConnectionString))
+                {
+                    await conn.OpenAsync();
+
+                        string sql = @"
+                                UPDATE Modifiers
+                                SET ShowOnline = @ShowOnline, PosVersion = CAST(CAST(PosVersion AS FLOAT) + 0.1 AS NVARCHAR(10)), UpdatedAt = GetDate()
+                                WHERE PosHubModifierId = @PosHubModifierId ;";
+
+                        using (SqlCommand cmd = new SqlCommand(sql, conn))
+                        {
+                            cmd.Parameters.AddWithValue("@ShowOnline", modifier.ShowOnline);
+                            cmd.Parameters.AddWithValue("@PosHubModifierId", modifier.Id ?? (object)DBNull.Value);
+                            await cmd.ExecuteNonQueryAsync();
+                        }
+                    }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ApiErrorMessageModel error = new ApiErrorMessageModel
+                {
+                    ErrorMessage = ex.Message,
+                    ErrorSource = ex.Source,
+                    StackTrace = ex.StackTrace,
+                    InnerErrorMessage = ex.InnerException?.Message ?? "",
+                    ApiCall = apiCall,
+                    MethodName = nameof(UpdateModifierByPosRefId),
+                    ErrorOccurredDateTime = DateTime.Now
+
+                };
+
+                await _apiErrorDA.InsertOrUpdateApiErrorAsync(error);
+                return false;
+            }
+        }
+    
     }
 }

@@ -35,16 +35,16 @@ namespace PosHubApi.Data.Repositories
 
         public async Task<bool> ValidateSignature(string xWebhookSignature, string body, string apiCall)
         {
-            Console.WriteLine("xWebhookSignature__");
-            Console.WriteLine(xWebhookSignature);
+            // Console.WriteLine("xWebhookSignature__");
+            // Console.WriteLine(xWebhookSignature);
             using JsonDocument doc = JsonDocument.Parse(body);
             string clientId = doc.RootElement.GetProperty("clientId").GetString();
 
-            Console.WriteLine("Body");
-            Console.WriteLine(body);
+            // Console.WriteLine("Body");
+            // Console.WriteLine(body);
 
-            Console.WriteLine("ClientId");
-            Console.WriteLine(clientId);
+            // Console.WriteLine("ClientId");
+            // Console.WriteLine(clientId);
             ClientsDto client = await _posHubAuthDA.GetClientDetailsByClientIdAsync(clientId, apiCall);
 
 
@@ -57,8 +57,8 @@ namespace PosHubApi.Data.Repositories
 
             Encoding encoding = Encoding.UTF8;
             bool isValid = false;
-            Console.WriteLine("ClientSecret");
-            Console.WriteLine(client.ClientSecret);
+            // Console.WriteLine("ClientSecret");
+            // Console.WriteLine(client.ClientSecret);
 
             byte[] keyBytes = Encoding.UTF8.GetBytes(client.ClientSecret);
             byte[] bodyBytes = Encoding.UTF8.GetBytes(body);
@@ -66,21 +66,21 @@ namespace PosHubApi.Data.Repositories
             using HMACSHA1 hmac = new HMACSHA1(keyBytes);
             byte[] hashBytes = hmac.ComputeHash(bodyBytes);
 
-            Console.WriteLine("hmac");
-            Console.WriteLine(hmac);
+            // Console.WriteLine("hmac");
+            // Console.WriteLine(hmac);
 
-            Console.WriteLine("hashBytes");
-            Console.WriteLine(hashBytes);
+            // Console.WriteLine("hashBytes");
+            // Console.WriteLine(hashBytes);
 
             string computedSignature = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
 
-            Console.WriteLine($"hash len: {hashBytes.Length}");                  // should be 20
-            Console.WriteLine($"hex: {Convert.ToHexString(hashBytes).ToLower()}"); // same as computedSignature
+            // Console.WriteLine($"hash len: {hashBytes.Length}");                  // should be 20
+            // Console.WriteLine($"hex: {Convert.ToHexString(hashBytes).ToLower()}"); // same as computedSignature
             //09305492c397bc817e601bc05c620c11ea114e38 //hex
-            Console.WriteLine($"base64: {Convert.ToBase64String(hashBytes)}");//CTBUksOXvIF+YBvAXGIMEeoRTjg=
+            // Console.WriteLine($"base64: {Convert.ToBase64String(hashBytes)}");//CTBUksOXvIF+YBvAXGIMEeoRTjg=
             
-            Console.WriteLine("computedSignature");
-            Console.WriteLine(computedSignature);
+            // Console.WriteLine("computedSignature");
+            // Console.WriteLine(computedSignature);
 
             isValid = computedSignature == xWebhookSignature;
 

@@ -9,6 +9,6 @@ namespace PosHubApi.Dtos
         public int Position { get; set; }
         public int MinPermitted { get; set; }
         public int MaxPermitted { get; set; }
-        public List<ModifierDto> Modifiers { get; set; } = new();
+        public List<ModifierDtoForGroupDto> Modifiers { get; set; } = new();
     }
 }

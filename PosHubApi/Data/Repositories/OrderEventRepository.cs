@@ -93,7 +93,7 @@ namespace PosHubApi.Data.Repositories
             // HttpResponseMessage response = await _httpClient.PutAsync(url, content);
 
             string url = $"{_baseUrl}/v1/accounts/{existingDto.AccountId}/locations/{existingDto.LocationId}/orders/{orderId}";
-            Console.WriteLine(url);
+            // Console.WriteLine(url);
             HttpRequestMessage request = new HttpRequestMessage(new HttpMethod("PATCH"), url)
             {
                 Content = new StringContent(jsonContent, Encoding.UTF8, "application/json")
@@ -101,7 +101,7 @@ namespace PosHubApi.Data.Repositories
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
             HttpResponseMessage response = await _httpClient.SendAsync(request);
 
-            Console.WriteLine(jsonContent);
+            // Console.WriteLine(jsonContent);
 
             if (response.IsSuccessStatusCode)
             {
