@@ -113,13 +113,14 @@ namespace PosHubApi.Data.Repositories
 
         // #endregion PullCatalog
 
-        public async Task<(CatalogImportEntityDto, bool)> GetPullCatalogAsync(string apiCall)
+        public async Task<(CatalogImportEntityDto, bool)> GetPullCatalogAsync(string apiCall, string accountId, string locationId)
         {
             CatalogImportEntityDto returnData = new CatalogImportEntityDto();
             List<CategoryDto> categories = new List<CategoryDto>();
             List<ModifierDto> modifiers = new List<ModifierDto>();
             List<ModifierGroupDto> modifierGroups = new List<ModifierGroupDto>();
             List<ProductDto> products = new List<ProductDto>();
+            LocationHoursDto location = new LocationHoursDto();
 
             bool IsSuccess = true;
 
@@ -182,29 +183,49 @@ namespace PosHubApi.Data.Repositories
 
             -- Products
             SELECT p.PosReference, p.Name, p.Description, p.Type, p.PosVersion, p.OriginalImageUrl, p.Price, p.InStorePrice,
-                p.TaxRate, p.IsTaxIncluded, p.ContainsAlcohol, p.ContainsTobacco, p.IsBikeFriendly, p.ShowOnline,
-                p.Position, p.DietaryRestriction, p.Spiciness,
-                STUFF((
-                    SELECT ',' + pc.CategoryPosRef
-                    FROM ProductCategories pc
-                    WHERE pc.ProductPosRef = p.PosReference
-                    FOR XML PATH(''), TYPE
-                ).value('.', 'NVARCHAR(MAX)'), 1, 1, '') AS Categories,
+            p.TaxRate, p.IsTaxIncluded, p.ContainsAlcohol, p.ContainsTobacco, p.IsBikeFriendly, p.ShowOnline,
+            p.Position, p.DietaryRestriction, p.Spiciness,p.FulfillmentTypes,
+            STUFF((
+                SELECT ',' + pc.CategoryPosRef
+                FROM ProductCategories pc
+                WHERE pc.ProductPosRef = p.PosReference
+                FOR XML PATH(''), TYPE
+            ).value('.', 'NVARCHAR(MAX)'), 1, 1, '') AS Categories,
 
-                -- ModifierGroups concatenation
-                STUFF((
-                    SELECT ',' + pm.ModifierGroupPosRef
-                    FROM ProductModifierGroups pm
-                    WHERE pm.ProductPosRef = p.PosReference
-                    FOR XML PATH(''), TYPE
-                ).value('.', 'NVARCHAR(MAX)'), 1, 1, '') AS ModifierGroups
-            FROM Products p
-            LEFT JOIN ProductCategories pc ON pc.ProductPosRef = p.PosReference
-            LEFT JOIN ProductModifierGroups pm ON pm.ProductPosRef = p.PosReference
-            GROUP BY p.PosReference, p.Name, p.Description, p.Type, p.PosVersion, p.OriginalImageUrl, p.Price,
-                    p.InStorePrice, p.TaxRate, p.IsTaxIncluded, p.ContainsAlcohol, p.ContainsTobacco,
-                    p.IsBikeFriendly, p.ShowOnline, p.Position, p.DietaryRestriction, p.Spiciness;
+            STUFF((
+                SELECT ',' + pm.ModifierGroupPosRef
+                FROM ProductModifierGroups pm
+                WHERE pm.ProductPosRef = p.PosReference
+                FOR XML PATH(''), TYPE
+            ).value('.', 'NVARCHAR(MAX)'), 1, 1, '') AS ModifierGroups,
 
+            sa.Weekday,
+            tp.StartDate,
+            tp.EndDate,
+            tp.StartTime,
+            tp.EndTime
+                FROM Products p
+                LEFT JOIN CategoryServiceAvailability sa ON sa.CategoryPosRef = p.PosReference
+                LEFT JOIN ServiceTimePeriods tp ON tp.ServiceAvailabilityId = sa.Id
+                GROUP BY p.PosReference, p.Name, p.Description, p.Type, p.PosVersion, p.OriginalImageUrl, p.Price,
+                        p.InStorePrice, p.TaxRate, p.IsTaxIncluded, p.ContainsAlcohol, p.ContainsTobacco,
+                        p.IsBikeFriendly, p.ShowOnline, p.Position, p.DietaryRestriction, p.Spiciness,p.FulfillmentTypes,
+                        sa.Weekday, tp.StartDate, tp.EndDate, tp.StartTime, tp.EndTime;
+
+
+            -- Location hours
+            SELECT 
+                AL.LocationId,
+                LA.Weekday,
+                P.StartDate,
+                P.EndDate,
+                P.StartTime,
+                P.EndTime
+            FROM [dbo].[AccountLocation] AL
+            LEFT JOIN [dbo].[LocationAvailability] LA ON AL.LocationId = LA.LocationRef
+            LEFT JOIN [dbo].[LocationServiceTimePeriods] P ON P.ServiceAvailabilityId = LA.Id
+            WHERE AL.LocationId = @LocationId and AL.AccountId=@AccountId
+            ORDER BY AL.LocationId, LA.Id, P.StartDate;
             ";
             try
             {
@@ -214,7 +235,11 @@ namespace PosHubApi.Data.Repositories
                     await connection.OpenAsync();
                     using (SqlCommand command = new SqlCommand(Sql, connection))
                     {
+                        
                         command.CommandTimeout = 60 * 60;
+
+                        command.Parameters.AddWithValue("@LocationId", locationId);
+                        command.Parameters.AddWithValue("@AccountId", accountId);
 
                         using (SqlDataReader reader = await command.ExecuteReaderAsync())
                         {
@@ -255,10 +280,10 @@ namespace PosHubApi.Data.Repositories
 
                                     serviceAvailability.TimePeriods.Add(new TimePeriodDto
                                     {
-                                        StartDate = reader["StartDate"]?.ToString(),
-                                        EndDate = reader["EndDate"]?.ToString(),
-                                        StartTime = reader["StartTime"]?.ToString(),
-                                        EndTime = reader["EndTime"]?.ToString()
+                                        StartDate = DateTime.Parse(reader["StartDate"]?.ToString()).ToString("yyyy-MM-dd"),
+                                        EndDate = DateTime.Parse(reader["EndDate"]?.ToString()).ToString("yyyy-MM-dd"),
+                                        StartTime = DateTime.Parse(reader["StartTime"]?.ToString()).ToString("HH:mm"),
+                                        EndTime = DateTime.Parse(reader["EndTime"]?.ToString()).ToString("HH:mm")
                                     });
                                 }
                             }
@@ -384,9 +409,9 @@ namespace PosHubApi.Data.Repositories
                                     {
                                         var modifierForGroup = new ModifierDtoForGroupDto
                                         {
-                                            Id = reader["PosHubModifierId"].ToString(),
+                                            Id = reader["ModifierPosRef"].ToString(),
                                             Name = reader["ModifierName"].ToString(),
-                                            Price = reader["Price"] != DBNull.Value ? Convert.ToDecimal(reader["Price"]) : 0
+                                            Price = reader["Price"] != DBNull.Value ? Convert.ToDecimal(reader["Price"]) * 100 : 0
                                         };
 
                                         currentGroup.Modifiers.Add(modifierForGroup);
@@ -402,41 +427,125 @@ namespace PosHubApi.Data.Repositories
                             {
                                 while (await reader.ReadAsync())
                                 {
-                                    ProductDto product = new ProductDto
+                                    string prodPosRef = reader["PosReference"].ToString();
+                                    ProductDto product = products.FirstOrDefault(p => p.PosReference == prodPosRef);
+                                    if (product == null)
                                     {
-                                        PosReference = reader["PosReference"].ToString(),
-                                        Name = reader["Name"].ToString(),
-                                        Description = reader["Description"].ToString(),
-                                        Type = reader["Type"].ToString(),
-                                        PosVersion = reader["PosVersion"].ToString(),
-                                        OriginalImageUrl = reader["OriginalImageUrl"].ToString(),
-                                        Price = (decimal)reader["Price"] * 100,
-                                        InStorePrice = (decimal)reader["InStorePrice"] * 100,
-                                        TaxRate = (decimal)reader["TaxRate"],
-                                        IsTaxIncluded = (bool)reader["IsTaxIncluded"],
-                                        ContainsAlcohol = (bool)reader["ContainsAlcohol"],
-                                        ContainsTobacco = (bool)reader["ContainsTobacco"],
-                                        IsBikeFriendly = (bool)reader["IsBikeFriendly"],
-                                        ShowOnline = (bool)reader["ShowOnline"],
-                                        Position = (int)reader["Position"],
-                                        // DietaryRestriction = reader["DietaryRestriction"].ToString(),
-                                        // Spiciness = reader["Spiciness"].ToString(),
+                                        product = new ProductDto
+                                        {
+                                            PosReference = prodPosRef,
+                                            Name = reader["Name"].ToString(),
+                                            Description = reader["Description"].ToString(),
+                                            Type = reader["Type"].ToString(),
+                                            PosVersion = reader["PosVersion"].ToString(),
+                                            OriginalImageUrl = reader["OriginalImageUrl"].ToString(),
+                                            Price = (decimal)reader["Price"] * 100,
+                                            InStorePrice = (decimal)reader["InStorePrice"] * 100,
+                                            TaxRate = (decimal)reader["TaxRate"],
+                                            IsTaxIncluded = (bool)reader["IsTaxIncluded"],
+                                            ContainsAlcohol = (bool)reader["ContainsAlcohol"],
+                                            ContainsTobacco = (bool)reader["ContainsTobacco"],
+                                            IsBikeFriendly = (bool)reader["IsBikeFriendly"],
+                                            ShowOnline = (bool)reader["ShowOnline"],
+                                            Position = (int)reader["Position"],
 
-                                        Categories = reader["Categories"] == DBNull.Value
-                                            ? new List<string>()
-                                            : reader["Categories"].ToString().Split(',').ToList(),
+                                            Categories = reader["Categories"] == DBNull.Value
+                                                ? new List<string>()
+                                                : reader["Categories"].ToString().Split(',').ToList(),
 
-                                        ModifierGroups = reader["ModifierGroups"] == DBNull.Value
-                                            ? new List<string>()
-                                            : reader["ModifierGroups"].ToString().Split(',').ToList()
-                                    };
+                                            ModifierGroups = reader["ModifierGroups"] == DBNull.Value
+                                                ? new List<string>()
+                                                : reader["ModifierGroups"].ToString().Split(',').ToList(),
 
-                                    products.Add(product);
+                                            ServiceAvailability = new List<ServiceAvailabilityDto>(),
+
+                                            FulfillmentTypes = reader["FulfillmentTypes"] == DBNull.Value
+                                                ? new List<string>()
+                                                : reader["FulfillmentTypes"].ToString().Split(',').ToList(),
+
+                                            NutritionalInfo = new NutritionalInfoDto
+                                            {
+                                                DietaryRestriction = reader["DietaryRestriction"].ToString(),
+                                                Spiciness = reader["Spiciness"].ToString(),
+                                            }
+                                        };
+                                        products.Add(product);
+                                    }
+
+                                    if (reader["Weekday"] != DBNull.Value)
+                                    {
+                                        string weekday = reader["Weekday"].ToString();
+                                        var serviceAvailability = product.ServiceAvailability
+                                            .FirstOrDefault(sa => sa.Weekday == weekday);
+                                        if (serviceAvailability == null)
+                                        {
+                                            serviceAvailability = new ServiceAvailabilityDto
+                                            {
+                                                Weekday = weekday,
+                                                TimePeriods = new List<TimePeriodDto>()
+                                            };
+                                            product.ServiceAvailability.Add(serviceAvailability);
+                                        }
+
+                                        serviceAvailability.TimePeriods.Add(new TimePeriodDto
+                                        {
+                                            StartDate = DateTime.Parse(reader["StartDate"]?.ToString()).ToString("yyyy-MM-dd"),
+                                            EndDate = DateTime.Parse(reader["EndDate"]?.ToString()).ToString("yyyy-MM-dd"),
+                                            StartTime = DateTime.Parse(reader["StartTime"]?.ToString()).ToString("HH:mm"),
+                                            EndTime = DateTime.Parse(reader["EndTime"]?.ToString()).ToString("HH:mm")
+                                        });
+                                    }
                                 }
 
                                 returnData.Products = products;
                             }
                             #endregion Products
+
+                            #region Location Hours
+                            if (await reader.NextResultAsync())
+                            {
+                                List<ServiceAvailabilityDto> businessHours = new List<ServiceAvailabilityDto>();
+
+                                while (await reader.ReadAsync())
+                                {
+                                    string weekday = reader["Weekday"]?.ToString();
+                                    if (string.IsNullOrEmpty(weekday)) continue;
+
+                                    var availability = businessHours.FirstOrDefault(sa => sa.Weekday == weekday);
+                                    if (availability == null)
+                                    {
+                                        availability = new ServiceAvailabilityDto
+                                        {
+                                            Weekday = weekday,
+                                            TimePeriods = new List<TimePeriodDto>()
+                                        };
+                                        businessHours.Add(availability);
+                                    }
+
+                                    availability.TimePeriods.Add(new TimePeriodDto
+                                    {
+                                        StartDate = reader["StartDate"] != DBNull.Value
+                                            ? DateTime.Parse(reader["StartDate"].ToString()).ToString("yyyy-MM-dd")
+                                            : null,
+                                        EndDate = reader["EndDate"] != DBNull.Value
+                                            ? DateTime.Parse(reader["EndDate"].ToString()).ToString("yyyy-MM-dd")
+                                            : null,
+                                        StartTime = reader["StartTime"] != DBNull.Value
+                                            ? DateTime.Parse(reader["StartTime"].ToString()).ToString("HH:mm")
+                                            : null,
+                                        EndTime = reader["EndTime"] != DBNull.Value
+                                            ? DateTime.Parse(reader["EndTime"].ToString()).ToString("HH:mm")
+                                            : null
+                                    });
+                                }
+
+                                returnData.Location = new LocationHoursDto
+                                {
+                                    BusinessHours = businessHours
+                                };
+                            }
+                            #endregion Location Hours
+
 
                         }
                     }

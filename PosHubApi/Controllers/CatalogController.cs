@@ -24,8 +24,11 @@ namespace PosHubApi.Controllers
         [HttpPost("pull")]
         public async Task<ActionResult<CatalogImportEntityDto>> PullCatalog()
         {
+            string accountId = Request.Query["accountId"];
+            string locationId = Request.Query["locationId"];
+
             string apiCall = $"Catalog/pull";
-            (CatalogImportEntityDto, bool) catalog = await _catalogRrepository.GetPullCatalogAsync(apiCall);
+            (CatalogImportEntityDto, bool) catalog = await _catalogRrepository.GetPullCatalogAsync(apiCall, accountId, locationId);
             string json = JsonSerializer.Serialize(catalog.Item1);
 
             Console.WriteLine(json);
@@ -169,7 +172,7 @@ namespace PosHubApi.Controllers
         }
 
         [HttpPatch("updateProductByPosRefId/{applicationId}")]
-        public async Task<ActionResult> UpdateProductByPosRefId(ProductDto product,string applicationId)
+        public async Task<ActionResult> UpdateProductByPosRefId(ProductDto product, string applicationId)
         {
             try
             {
@@ -182,7 +185,7 @@ namespace PosHubApi.Controllers
                 return BadRequest(new { error = ex.Message });
             }
         }
-    
+
         [HttpGet("getCatalogModifiers/{applicationId}/{limit}")]
         public async Task<ActionResult<CatalogModifiersResponseDto>> GetCatalogModifiers(string applicationId, string limit)
         {
@@ -199,7 +202,7 @@ namespace PosHubApi.Controllers
         }
 
         [HttpPatch("updateModifierByPosRefId/{applicationId}")]
-        public async Task<ActionResult> UpdateModifierByPosRefId(ModifierDto modifier,string applicationId)
+        public async Task<ActionResult> UpdateModifierByPosRefId(ModifierDto modifier, string applicationId)
         {
             try
             {
@@ -212,8 +215,8 @@ namespace PosHubApi.Controllers
                 return BadRequest(new { error = ex.Message });
             }
         }
-    
-    
-    
+
+
+
     }
 }

@@ -2,7 +2,7 @@ namespace PosHubApi.Dtos
 {
     public class CatalogImportEntityDto
     {
-        public LocationDto Location { get; set; }
+        public LocationHoursDto Location { get; set; }
         public List<CategoryDto> Categories { get; set; }
         public List<ProductDto> Products { get; set; }
         public List<ModifierGroupDto> ModifierGroups { get; set; }

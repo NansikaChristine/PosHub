@@ -112,6 +112,7 @@ export class ItemComponent implements OnInit {
 
   
   updateProduct() {
+    this.selectedProduct.price = this.selectedProduct.price * 100;
     this.posHubService.updateProductByPosRefId(this.selectedProduct, this.currentClient.applicationId).subscribe({
       next: (res) => {
         this.toasterService.success('Product update successfully:');

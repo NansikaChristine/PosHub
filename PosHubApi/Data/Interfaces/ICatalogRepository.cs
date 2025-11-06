@@ -8,7 +8,7 @@ namespace PosHubApi.Data.Interfaces
 {
     public interface ICatalogRepository
     {
-        Task<(CatalogImportEntityDto, bool)> GetPullCatalogAsync(string apiCall);
+        Task<(CatalogImportEntityDto, bool)> GetPullCatalogAsync(string apiCall, string accountId, string locationId);
         Task<bool> SyncCatalogToPosHub(string applicationId, string apiCall);
         Task<List<ProductDto>> GetCatalogProducts(string apiCall);
         Task<ProductDto> GetCatalogProductByProductId(string applicationId, string productId, string apiCall);
