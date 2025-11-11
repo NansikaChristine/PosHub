@@ -116,7 +116,8 @@ namespace PosHubApi.Data.DataAccess
             string sql = @"
                 UPDATE [dbo].[OrderWebhookEvents]
                 SET [NewState] = @NewState, [UpdatedAt] = getdate()
-                WHERE [OrderId] = @OrderId";
+                WHERE [OrderId] = @OrderId 
+                ORDER BY [UpdatedAt] DESC";
 
             try
             {
@@ -158,7 +159,8 @@ namespace PosHubApi.Data.DataAccess
                 SELECT TOP 1 [NewState], AccountId, LocationId, ClientId, EventId, EventTime, ConnectionId, EventType,
                 [PreviousState], ObjectType 
                 FROM [dbo].[OrderWebhookEvents] WITH (NOLOCK)
-                WHERE [OrderId] = @OrderId AND [NewState] IS NOT NULL";
+                WHERE [OrderId] = @OrderId AND [NewState] IS NOT NULL
+                ORDER BY [UpdatedAt] DESC; ";
 
             try
             {
@@ -190,14 +192,24 @@ namespace PosHubApi.Data.DataAccess
                                 {
                                     try
                                     {
-                                        OrderEventDto orderEventNewState = JsonSerializer.Deserialize<OrderEventDto>(jsonNewState, new JsonSerializerOptions
+                                        OrderEventDto? orderEventNewState = null;
+                                        OrderEventDto? orderEventPreviousState = null;
+
+                                        if (!string.IsNullOrWhiteSpace(jsonNewState))
                                         {
-                                            PropertyNameCaseInsensitive = true
-                                        });
-                                        OrderEventDto orderEventPreviousState = JsonSerializer.Deserialize<OrderEventDto>(jsonPreviousState, new JsonSerializerOptions
+                                            orderEventNewState = JsonSerializer.Deserialize<OrderEventDto>(jsonNewState, new JsonSerializerOptions
+                                            {
+                                                PropertyNameCaseInsensitive = true
+                                            });
+                                        }
+
+                                        if (!string.IsNullOrWhiteSpace(jsonPreviousState))
                                         {
-                                            PropertyNameCaseInsensitive = true
-                                        });
+                                            orderEventPreviousState = JsonSerializer.Deserialize<OrderEventDto>(jsonPreviousState, new JsonSerializerOptions
+                                            {
+                                                PropertyNameCaseInsensitive = true
+                                            });
+                                        }
 
                                         return new OrderWebhookEventRequestDto
                                         {

@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using AutoMapper;
@@ -23,7 +24,7 @@ namespace PosHubApi.Data.Repositories
         private readonly OrderEventDA _orderEventDA;
         private readonly LogsDA _logsDA;
         private readonly PosHubAuthDA _posHubAuthDA;
-         private readonly string _baseUrl;
+        private readonly string _baseUrl;
         private readonly WebhookEventDA _webhookEventDA;
         private readonly IMapper _mapper;
 
@@ -46,6 +47,7 @@ namespace PosHubApi.Data.Repositories
             if (existingDto == null || string.IsNullOrWhiteSpace(existingDto.NewState?.Id))
                 return false;
 
+            // existingDto.newState -> jsonstring => previos stTE
             ClientsDto client = await _posHubAuthDA.GetClientDetailsByClientIdAsync(existingDto.ApplicationId, apiCall);
 
             UpdateOrderEventRequestDto dto = new UpdateOrderEventRequestDto
@@ -93,7 +95,7 @@ namespace PosHubApi.Data.Repositories
             // HttpResponseMessage response = await _httpClient.PutAsync(url, content);
 
             string url = $"{_baseUrl}/v1/accounts/{existingDto.AccountId}/locations/{existingDto.LocationId}/orders/{orderId}";
-            // Console.WriteLine(url);
+
             HttpRequestMessage request = new HttpRequestMessage(new HttpMethod("PATCH"), url)
             {
                 Content = new StringContent(jsonContent, Encoding.UTF8, "application/json")
@@ -101,18 +103,33 @@ namespace PosHubApi.Data.Repositories
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
             HttpResponseMessage response = await _httpClient.SendAsync(request);
 
-            // Console.WriteLine(jsonContent);
-
             if (response.IsSuccessStatusCode)
             {
-                // OrderWebhookEventRequestDto existOrderDto = await _orderEventDA.GetOrderEventAsync(orderId, apiCall);
-                // string reqForUpdate = await response.Content.ReadAsStringAsync();
-                // OrderEventDto webhookEvent = JsonSerializer.Deserialize<OrderEventDto>(reqForUpdate);
-                // existOrderDto.NewState = webhookEvent;
-                // if (existOrderDto != null)
-                // {
-                //     await _webhookEventDA.OrderWebhookEvent(existOrderDto, apiCall);
-                // }
+                // NEW STATE => RESPONSE
+                // EVENI ID => UUID [Mnual]
+
+                OrderWebhookEventRequestDto existOrderDto = await _orderEventDA.GetOrderEventAsync(orderId, apiCall);
+                string reqForUpdate = await response.Content.ReadAsStringAsync();
+                Console.WriteLine("RAW RESPONSE: " + reqForUpdate);
+
+                OrderResponseDto apiResponse = JsonSerializer.Deserialize<OrderResponseDto>(
+                    reqForUpdate,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                );
+
+                OrderEventDto webhookEvent = apiResponse?.Data;
+
+                if (webhookEvent != null)
+                {
+                    existOrderDto.NewState = webhookEvent;
+                    existOrderDto.PreviousState = existingDto?.NewState ?? new OrderEventDto();
+                }
+
+                if (existOrderDto != null)
+                {
+                    await _webhookEventDA.UpdateOrderWebhookEvent(existOrderDto, apiCall);
+                }
+
                 await _logsDA.InsertLogAsync(new LogModel
                 {
                     Url = url,

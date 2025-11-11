@@ -15,7 +15,7 @@ export class OrderComponent implements OnInit {
 
   currentClient!: ClientsDto
   orderInputs: { [appId: string]: { orderId: string, status: string, reason: string } } = {};  
-  statuses: string[] = ['ACCEPTED', 'COMPLETED', 'REJECTED', 'CANCELLED'];
+  statuses: string[] = ['ACCEPTED', 'COMPLETED', 'REJECTED', 'CANCELLED', 'READY'];
   
   constructor(private router:Router, public toasterService: ToastService,
      private cdr: ChangeDetectorRef,public posHubService: PosHubCatalogService) { }
